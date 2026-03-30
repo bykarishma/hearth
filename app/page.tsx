@@ -392,6 +392,7 @@ export default function Home() {
 
       {/* ═══ HERO ═══ */}
       {step === "hero" && (
+        <>
         <div className="hero-bg">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="hero-img" src="https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1920&q=80" alt="" aria-hidden="true" />
@@ -457,6 +458,7 @@ export default function Home() {
             ))}
           </div>
         </div>
+        </>
       )}
 
       {/* ═══ STAGE ═══ */}
