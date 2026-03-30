@@ -395,7 +395,7 @@ export default function Home() {
         <>
         <div className="hero-bg">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="hero-img" src="https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1920&q=80" alt="" aria-hidden="true" />
+          <img className="hero-img" src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1920&q=80" alt="" aria-hidden="true" />
           <div className="hero-overlay" />
           <div className="hero">
             <div className="wordmark f1">
@@ -416,11 +416,6 @@ export default function Home() {
               Answer a few questions about what you already know. Walk away with something organized, clear, and ready to use.
             </p>
 
-            <button className="btn-cta f3" onClick={() => goTo("stage")}>
-              Get started
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </button>
-
             <div className="trust-pill f1">
               {["No account","Nothing saved","Completely free","No names needed"].map((t, i, arr) => (
                 <span key={t} style={{display:"inline-flex",alignItems:"center",gap:6}}>
@@ -435,7 +430,12 @@ export default function Home() {
               ))}
             </div>
 
-            <p className="cta-note f3">Takes about 10 minutes</p>
+            <button className="btn-cta f3" onClick={() => goTo("stage")}>
+              Get started
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+
+            <p className="cta-note f3"><em>Only takes 10 minutes.</em></p>
           </div>
         </div>
 
