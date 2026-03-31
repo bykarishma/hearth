@@ -11,6 +11,9 @@ interface Brief {
   conditions: string | null;
   medications: string | null;
   allergies: string | null;
+  careTeam: string | null;
+  livingSituation: string | null;
+  comfortGoals: string | null;
   importantNotes: string | null;
   forYou: string | null;
 }
@@ -609,6 +612,9 @@ export default function Home() {
           {brief.conditions && <BriefCard label="Conditions" body={brief.conditions} />}
           {brief.medications && <BriefCard label="Medications" body={brief.medications} />}
           {brief.allergies && <BriefCard label="Known allergies" body={brief.allergies} />}
+          {brief.careTeam && <BriefCard label="Care team" body={brief.careTeam} />}
+          {brief.livingSituation && <BriefCard label="Living situation" body={brief.livingSituation} />}
+          {brief.comfortGoals && <BriefCard label="Comfort and care goals" body={brief.comfortGoals} />}
           {brief.importantNotes && <BriefCard label="Recent changes and notes" body={brief.importantNotes} />}
 
           {/* For the caregiver */}

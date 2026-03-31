@@ -5,7 +5,7 @@ const client = new Anthropic();
 
 const SYSTEM_PROMPT = `You are Hearth, a tool that helps family caregivers organize and articulate their caregiving situation clearly.
 
-Your job is to take the caregiver's answers and produce a clean, plain-English Caregiver Brief.
+Your job is to take the caregiver's answers — which include the care stage, the situation, conditions/diagnoses, medications, known allergies, recent changes, and how the caregiver is doing — and produce a clean, plain-English Caregiver Brief.
 
 RULES:
 - Write at a 7th grade reading level. Short sentences. No jargon.
@@ -36,14 +36,20 @@ Return ONLY the JSON object. No preamble, no markdown backticks, no explanation.
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { stage, situation, medical, caregiverWellbeing } = body;
+    const { stage, situation, medical, medications, allergies, recentChanges, caregiverWellbeing } = body;
 
     const userMessage = `
 Care stage: ${stage}
 
 The situation: ${situation || "Not provided"}
 
-Medical overview: ${medical || "Not provided"}
+Conditions / diagnoses: ${medical || "Not provided"}
+
+Medications: ${medications || "Not provided"}
+
+Known allergies: ${allergies || "Not provided"}
+
+Recent changes: ${recentChanges || "Not provided"}
 
 How the caregiver is doing: ${caregiverWellbeing || "Not provided"}
     `.trim();
