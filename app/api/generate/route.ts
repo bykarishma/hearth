@@ -66,7 +66,8 @@ How the caregiver is doing: ${caregiverWellbeing || "Not provided"}
       throw new Error("Unexpected response type");
     }
 
-    const parsed = JSON.parse(content.text);
+    const raw = content.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const parsed = JSON.parse(raw);
     return NextResponse.json(parsed);
   } catch (error) {
     console.error("Generate error:", error);
