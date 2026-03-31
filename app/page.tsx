@@ -326,6 +326,10 @@ export default function Home() {
         .btn-ghost { display: block; width: 100%; padding: 15px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 16px; cursor: pointer; margin-top: 10px; transition: all 0.15s; text-align: center; }
         .btn-ghost:hover { background: var(--surface); border-color: #bbb; color: var(--ink); }
 
+        /* Back button */
+        .btn-back { background: none; border: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; padding: 0; margin-bottom: 1.5rem; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; }
+        .btn-back:hover { color: var(--ink); }
+
         /* Error */
         .error-banner { background: #FFF0F0; border: 1px solid #FFC0C0; border-radius: var(--radius-md); padding: 14px 16px; margin-top: 1rem; font-size: 14px; color: #8B2020; }
 
@@ -349,9 +353,9 @@ export default function Home() {
         .brief-glance { background: var(--burg-light); border: 1px solid var(--burg-border); border-radius: var(--radius-md); padding: 22px 24px; margin-bottom: 10px; }
         .brief-glance-label { font-size: 11px; font-weight: 500; color: var(--burg); text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 10px; }
         .brief-glance-body  { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--burg-deep); line-height: 1.75; }
-        .brief-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 20px 22px; margin-bottom: 10px; }
-        .brief-card-label { font-size: 11px; font-weight: 500; color: var(--faint); text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 10px; }
-        .brief-card-body  { font-size: 16px; color: var(--ink-soft); line-height: 1.75; }
+        .brief-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--burg); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 20px 22px; margin-bottom: 12px; }
+        .brief-card-label { font-size: 10px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
+        .brief-card-body  { font-size: 16px; color: var(--ink); line-height: 1.75; }
         .disclosure { font-size: 12px; color: var(--faint); line-height: 1.65; margin-top: 2rem; padding-top: 1.75rem; border-top: 1px solid var(--border-soft); }
 
         /* For the caregiver */
@@ -467,6 +471,7 @@ export default function Home() {
       {/* ═══ STAGE ═══ */}
       {step === "stage" && (
         <div className="q-wrap">
+          <button className="btn-back" onClick={() => goTo("hero")}>← Back</button>
           <QWordmark />
           <div className="progress-track"><div className="progress-fill" style={{width:"18%"}} /></div>
           <div className="progress-label">Getting started</div>
@@ -489,6 +494,7 @@ export default function Home() {
       {/* ═══ Q1 ═══ */}
       {step === "q1" && (
         <div className="q-wrap">
+          <button className="btn-back" onClick={() => goTo("stage")}>← Back</button>
           <QWordmark />
           <div className="progress-track"><div className="progress-fill" style={{width:"44%"}} /></div>
           <div className="progress-label">Step 1 of 3 — The situation</div>
@@ -519,6 +525,7 @@ export default function Home() {
       {/* ═══ Q2 ═══ */}
       {step === "q2" && (
         <div className="q-wrap">
+          <button className="btn-back" onClick={() => goTo("q1")}>← Back</button>
           <QWordmark />
           <div className="progress-track"><div className="progress-fill" style={{width:"68%"}} /></div>
           <div className="progress-label">Step 2 of 3 — Medical overview</div>
@@ -553,6 +560,7 @@ export default function Home() {
       {/* ═══ Q3 ═══ */}
       {step === "q3" && (
         <div className="q-wrap">
+          <button className="btn-back" onClick={() => goTo("q2")}>← Back</button>
           <QWordmark />
           <div className="progress-track"><div className="progress-fill" style={{width:"90%"}} /></div>
           <div className="progress-label">Step 3 of 3 — Just for you</div>
@@ -660,6 +668,7 @@ export default function Home() {
           </div>
 
           <div className="no-print" style={{marginTop:"2rem",display:"flex",flexDirection:"column" as const,gap:10}}>
+            <p style={{fontSize:12,color:"var(--faint)",marginBottom:8}}>File will save as caregiver_brief when printed to PDF</p>
             <button className="btn-primary" onClick={() => window.print()}>Print or save as PDF</button>
             <button className="btn-ghost" onClick={reset}>Start over</button>
           </div>
@@ -686,7 +695,7 @@ function BriefCard({ label, body }: { label: string; body: string }) {
   return (
     <div className="brief-card">
       <div className="brief-card-label">{label}</div>
-      <div className="brief-card-body">{body}</div>
+      <div className="brief-card-body" style={{whiteSpace: "pre-line"}}>{body}</div>
     </div>
   );
 }
