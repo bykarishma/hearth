@@ -285,7 +285,7 @@ export default function Home() {
         .what-divider { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 660px; margin-bottom: 1.75rem; }
         .wd-line { flex: 1; height: 1px; background: var(--border); }
         .wd-label { font-size: 11px; font-weight: 500; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.14em; white-space: nowrap; }
-        .what-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; width: 100%; max-width: 660px; text-align: left; }
+        .what-cards { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; width: 100%; max-width: 660px; text-align: left; }
         .what-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 20px 18px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.2s, transform 0.2s; }
         .what-card:hover { border-color: var(--burg-border); transform: translateY(-2px); }
         .wc-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
@@ -393,7 +393,7 @@ export default function Home() {
         .brief-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--burg); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 20px 22px; margin-bottom: 12px; }
         .brief-card-label { font-size: 10px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
         .brief-card-body  { font-size: 16px; color: var(--ink); line-height: 1.75; }
-        .disclosure { font-size: 12px; color: var(--faint); line-height: 1.65; margin-top: 2rem; padding-top: 1.75rem; border-top: 1px solid var(--border-soft); }
+        .disclosure { font-size: 13px; color: var(--muted); line-height: 1.65; margin-top: 2rem; padding-top: 1.75rem; border-top: 1px solid var(--border-soft); }
 
         /* For the caregiver */
         .ftc-section { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
@@ -500,9 +500,14 @@ export default function Home() {
                 <div className="wc-body">{c.body}</div>
               </div>
             ))}
+            <div className="what-card">
+              <div className="wc-icon" style={{background:"#EEF2F8"}}>⚡</div>
+              <div className="wc-title">FHIR R4 integration</div>
+              <div className="wc-body">Optionally pre-fill medical details from an existing patient record using a FHIR-compatible patient ID. No data is stored.</div>
+            </div>
           </div>
-          <p style={{fontSize:12,color:"var(--faint)",marginTop:"2rem",textAlign:"center" as const}}>
-            <a href="/privacy" style={{color:"var(--faint)",textDecoration:"underline"}}>Privacy, HIPAA & compliance information</a>
+          <p style={{fontSize:13,color:"var(--muted)",marginTop:"2rem",textAlign:"center" as const}}>
+            <a href="/privacy" style={{color:"var(--muted)",textDecoration:"underline"}}>Privacy, HIPAA & compliance information</a>
           </p>
         </div>
         </>
