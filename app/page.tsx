@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { fetchPatientMedications, fetchPatientConditions } from "@/lib/fhir";
 
 type Stage = "Active care" | "Palliative care" | "Hospice care" | "Bereavement";
 type Step = "hero" | "stage" | "q1" | "q2" | "q3" | "loading" | "brief";
@@ -85,6 +86,10 @@ export default function Home() {
   const [error, setError]                 = useState<string | null>(null);
   const [q1Open, setQ1Open]               = useState(false);
   const [q2Open, setQ2Open]               = useState(false);
+  const [fhirId, setFhirId]               = useState("");
+  const [fhirLoading, setFhirLoading]     = useState(false);
+  const [fhirError, setFhirError]         = useState<string | null>(null);
+  const [fhirLoaded, setFhirLoaded]       = useState(false);
 
   function goTo(s: Step) {
     setStep(s);
@@ -95,6 +100,29 @@ export default function Home() {
     setWellbeing(prev =>
       prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
     );
+  }
+
+  async function loadFhir() {
+    if (!fhirId.trim()) return;
+    setFhirLoading(true);
+    setFhirError(null);
+    try {
+      const [meds, conditions] = await Promise.all([
+        fetchPatientMedications(fhirId.trim()),
+        fetchPatientConditions(fhirId.trim()),
+      ]);
+      if (meds.length > 0) {
+        setMedications(meds.map((m: { name: string; instructions: string }) => `${m.name}${m.instructions ? ' — ' + m.instructions : ''}`).join('\n'));
+      }
+      if (conditions.length > 0) {
+        setMedical(conditions.map((c: { name: string }) => c.name).join(', '));
+      }
+      setFhirLoaded(true);
+    } catch {
+      setFhirError("Could not load patient data. Check the ID and try again.");
+    } finally {
+      setFhirLoading(false);
+    }
   }
 
   async function generate() {
@@ -125,6 +153,7 @@ export default function Home() {
     setMedical(""); setMedications(""); setAllergies(""); setRecentChanges("");
     setWellbeing([]); setBrief(null); setError(null);
     setQ1Open(false); setQ2Open(false);
+    setFhirId(""); setFhirLoading(false); setFhirError(null); setFhirLoaded(false);
   }
 
   const dateStr = new Date().toLocaleDateString("en-US", {
@@ -330,6 +359,17 @@ export default function Home() {
         .btn-back { background: none; border: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; padding: 0; margin-bottom: 1.5rem; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; }
         .btn-back:hover { color: var(--ink); }
 
+        /* FHIR prefill card */
+        .fhir-prefill-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 1.5rem; }
+        .fhir-prefill-label { font-size: 12px; font-weight: 500; color: var(--faint); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+        .fhir-prefill-row { display: flex; gap: 8px; }
+        .fhir-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); background: var(--surface); }
+        .fhir-input:focus { outline: none; border-color: var(--burg); }
+        .fhir-btn { padding: 10px 18px; background: var(--burg); color: white; border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+        .fhir-btn:disabled { background: var(--border); color: var(--faint); cursor: not-allowed; }
+        .fhir-error   { font-size: 13px; color: #8B2020; margin-top: 8px; }
+        .fhir-success { font-size: 13px; color: var(--burg); margin-top: 8px; font-weight: 500; }
+
         /* Error */
         .error-banner { background: #FFF0F0; border: 1px solid #FFC0C0; border-radius: var(--radius-md); padding: 14px 16px; margin-top: 1rem; font-size: 14px; color: #8B2020; }
 
@@ -464,6 +504,9 @@ export default function Home() {
               </div>
             ))}
           </div>
+          <p style={{fontSize:12,color:"var(--faint)",marginTop:"2rem",textAlign:"center" as const}}>
+            <a href="/privacy" style={{color:"var(--faint)",textDecoration:"underline"}}>Privacy, HIPAA & compliance information</a>
+          </p>
         </div>
         </>
       )}
@@ -531,6 +574,23 @@ export default function Home() {
           <div className="progress-label">Step 2 of 3 — Medical overview</div>
           <h2 className="big-q">What conditions or diagnoses have they been given?</h2>
           <p className="q-sub">Condition names only — no record numbers, insurance IDs, or personal identifiers needed.</p>
+          <div className="fhir-prefill-card">
+            <div className="fhir-prefill-label">Optional: pre-fill from a patient ID</div>
+            <div className="fhir-prefill-row">
+              <input
+                type="text"
+                className="fhir-input"
+                placeholder="Patient ID"
+                value={fhirId}
+                onChange={e => setFhirId(e.target.value)}
+              />
+              <button className="fhir-btn" onClick={loadFhir} disabled={fhirLoading}>
+                {fhirLoading ? "Loading..." : "Pre-fill"}
+              </button>
+            </div>
+            {fhirError && <p className="fhir-error">{fhirError}</p>}
+            {fhirLoaded && <p className="fhir-success">Fields pre-filled. Review and edit below.</p>}
+          </div>
           <div className="field">
             <label className="field-label" htmlFor="medical">Conditions</label>
             <textarea id="medical" value={medical} onChange={e => setMedical(e.target.value)} placeholder="e.g. diabetes, congestive heart failure, dementia, Parkinson's..." rows={3} />
