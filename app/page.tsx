@@ -30,9 +30,9 @@ const WELLBEING_OPTIONS = [
   { value: "exhausted", label: "I'm exhausted but keeping it together" },
   { value: "grief",     label: "Grief that has already started, even though they're still here" },
   { value: "guilt",     label: "Guilt about not doing enough" },
-  { value: "lonely",    label: "Loneliness — feeling like nobody really understands" },
+  { value: "lonely",    label: "Loneliness, feeling like nobody really understands" },
   { value: "fear",      label: "Fear about what comes next" },
-  { value: "anger",     label: "Anger — at the situation, at how unfair this is" },
+  { value: "anger",     label: "Anger, at the situation, at how unfair this is" },
   { value: "relief",    label: "Relief mixed with guilt about feeling relieved" },
   { value: "ok",        label: "I'm managing okay most of the time" },
 ];
@@ -40,25 +40,25 @@ const WELLBEING_OPTIONS = [
 const TIMELINE: Record<Stage, { period: string; items: string[] }[]> = {
   "Active care": [
     { period: "Today", items: ["Write down your loved one's current medications and conditions", "Identify one family member or friend who can share the load", "Locate their insurance card and primary doctor's number"] },
-    { period: "Days 1–3", items: ["Schedule a conversation with their primary care provider", "Set up a simple medication tracking system", "Tell your employer you may need flexibility — you don't have to share details"] },
+    { period: "Days 1–3", items: ["Schedule a conversation with their primary care provider", "Set up a simple medication tracking system", "Tell your employer you may need flexibility. You don't have to share details."] },
     { period: "Days 4–7", items: ["Research whether a home health aide is needed", "Ask their doctor about what to expect in coming weeks", "Find one hour this week that is just for you"] },
-    { period: "Week 2+", items: ["Connect with a caregiver support group — online counts", "Review insurance coverage for home care or specialist visits", "Revisit this brief and update anything that has changed"] },
+    { period: "Week 2+", items: ["Connect with a caregiver support group. Online counts.", "Review insurance coverage for home care or specialist visits", "Revisit this brief and update anything that has changed"] },
   ],
   "Palliative care": [
     { period: "Today", items: ["Ask the palliative care team what comfort means for your loved one right now", "Write down what a good day looks like for them", "Tell someone close to you what you are going through"] },
-    { period: "Days 1–3", items: ["Ask about a hospice or palliative social worker — their job is to help families like yours", "Clarify what medications are for comfort vs. treatment", "Give yourself permission to not have all the answers"] },
-    { period: "Days 4–7", items: ["Have one honest conversation with your loved one about what they want, if they are able", "Identify who in the family needs to be kept informed and how", "Find a grief counselor or therapist — anticipatory grief is real and you deserve support"] },
-    { period: "Week 2+", items: ["Ask about advance directives if not already in place — caringinfo.org has free resources", "Plan for respite — even a few hours matters", "Connect with others who have been through this"] },
+    { period: "Days 1–3", items: ["Ask about a hospice or palliative social worker. Their job is to help families like yours.", "Clarify what medications are for comfort vs. treatment", "Give yourself permission to not have all the answers"] },
+    { period: "Days 4–7", items: ["Have one honest conversation with your loved one about what they want, if they are able", "Identify who in the family needs to be kept informed and how", "Find a grief counselor or therapist. Anticipatory grief is real and you deserve support."] },
+    { period: "Week 2+", items: ["Ask about advance directives if not already in place. caringinfo.org has free resources.", "Plan for respite. Even a few hours matters.", "Connect with others who have been through this"] },
   ],
   "Hospice care": [
     { period: "Today", items: ["Ask the hospice team what to expect in the coming days and weeks", "Make sure everyone who needs to be there knows how to get there", "Tell the people who love you that you need support too"] },
     { period: "Days 1–3", items: ["Ask the hospice social worker about grief resources for family members", "Clarify what the hospice team handles vs. what falls to you", "Write down anything your loved one has expressed about their wishes"] },
-    { period: "Days 4–7", items: ["Designate one family member as the primary contact for updates", "Allow yourself to grieve — you don't have to wait", "Ask about bereavement support — most hospice organizations offer it"] },
+    { period: "Days 4–7", items: ["Designate one family member as the primary contact for updates", "Allow yourself to grieve. You don't have to wait.", "Ask about bereavement support. Most hospice organizations offer it."] },
     { period: "Week 2+", items: ["Take care of practical documents if not already done", "Stay connected to the hospice social worker", "Remember that being present is enough — you don't have to fix this"] },
   ],
   "Bereavement": [
     { period: "Today", items: ["You don't have to do anything today except be", "Call one person who can sit with you, even quietly", "Know that what you are feeling is real and it is allowed"] },
-    { period: "Days 1–3", items: ["Handle only what is truly urgent — most things can wait", "Eat something. Sleep if you can. Ask for help with both.", "Let people help you in concrete ways — meals, errands, presence"] },
+    { period: "Days 1–3", items: ["Handle only what is truly urgent. Most things can wait.", "Eat something. Sleep if you can. Ask for help with both.", "Let people help you in concrete ways: meals, errands, presence"] },
     { period: "Days 4–7", items: ["Look into bereavement support — GriefShare, hospice bereavement programs, or a therapist", "Begin notifying institutions only as you have energy", "Know that grief is not linear and there is no timeline you have to follow"] },
     { period: "Week 2+", items: ["Consider a grief group — being with others who understand is powerful", "Be patient with yourself as your identity shifts outside the caregiving role", "The Family Caregiver Alliance (caregiver.org) has bereavement resources specifically for former caregivers"] },
   ],
@@ -68,7 +68,7 @@ const RESOURCES = [
   { name: "Family Caregiver Alliance", desc: "Free helpline, resources, and support groups for caregivers at every stage.", url: "https://caregiver.org", phone: "800-445-8106" },
   { name: "The Conversation Project", desc: "Tools to help families talk about end of life wishes before a crisis.", url: "https://theconversationproject.org" },
   { name: "CaringInfo", desc: "Free advance directive forms and hospice information from the National Hospice Foundation.", url: "https://caringinfo.org" },
-  { name: "GriefShare", desc: "Support groups for people grieving a death — includes anticipatory grief resources.", url: "https://griefshare.org" },
+  { name: "GriefShare", desc: "Support groups for people grieving a death, including anticipatory grief resources.", url: "https://griefshare.org" },
   { name: "AARP Caregiver Support", desc: "Local and virtual caregiver support groups, articles, and a helpline.", url: "https://aarp.org/caregiving" },
 ];
 
@@ -84,8 +84,6 @@ export default function Home() {
   const [wellbeing, setWellbeing]         = useState<string[]>([]);
   const [brief, setBrief]                 = useState<Brief | null>(null);
   const [error, setError]                 = useState<string | null>(null);
-  const [q1Open, setQ1Open]               = useState(false);
-  const [q2Open, setQ2Open]               = useState(false);
   const [fhirId, setFhirId]               = useState("");
   const [fhirLoading, setFhirLoading]     = useState(false);
   const [fhirError, setFhirError]         = useState<string | null>(null);
@@ -112,7 +110,7 @@ export default function Home() {
         fetchPatientConditions(fhirId.trim()),
       ]);
       if (meds.length > 0) {
-        setMedications(meds.map((m: { name: string; instructions: string }) => `${m.name}${m.instructions ? ' — ' + m.instructions : ''}`).join('\n'));
+        setMedications(meds.map((m: { name: string; instructions: string }) => `${m.name}${m.instructions ? ', ' + m.instructions : ''}`).join('\n'));
       }
       if (conditions.length > 0) {
         setMedical(conditions.map((c: { name: string }) => c.name).join(', '));
@@ -152,7 +150,6 @@ export default function Home() {
     setStep("hero"); setStage(null); setSituation(""); setSituationMore("");
     setMedical(""); setMedications(""); setAllergies(""); setRecentChanges("");
     setWellbeing([]); setBrief(null); setError(null);
-    setQ1Open(false); setQ2Open(false);
     setFhirId(""); setFhirLoading(false); setFhirError(null); setFhirLoaded(false);
   }
 
@@ -390,9 +387,9 @@ export default function Home() {
         .brief-wm  { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; }
         .brief-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; margin-bottom: 4px; }
         .brief-meta  { font-size: 14px; color: var(--faint); }
-        .brief-glance { background: var(--burg-light); border: 1px solid var(--burg-border); border-radius: var(--radius-md); padding: 22px 24px; margin-bottom: 10px; }
+        .brief-glance { background: var(--burg-light); border: 1px solid var(--burg-border); border-radius: var(--radius-md); padding: 16px 20px; margin-bottom: 10px; }
         .brief-glance-label { font-size: 11px; font-weight: 500; color: var(--burg); text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 10px; }
-        .brief-glance-body  { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--burg-deep); line-height: 1.75; }
+        .brief-glance-body { font-family: 'Cormorant Garamond', serif; font-size: 16px; color: var(--burg-deep); line-height: 1.65; }
         .brief-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--burg); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 20px 22px; margin-bottom: 12px; }
         .brief-card-label { font-size: 10px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
         .brief-card-body  { font-size: 16px; color: var(--ink); line-height: 1.75; }
@@ -452,7 +449,7 @@ export default function Home() {
                 </svg>
               </div>
               <span className="wm-name">Hearth</span>
-              <span className="wm-tag">Caregiver briefing tool</span>
+              <span className="wm-tag">Free caregiver tool</span>
             </div>
 
             <h1 className="hero-headline f2">
@@ -486,7 +483,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div style={{maxWidth:720,margin:"0 auto",padding:"3rem 2rem 5rem",display:"flex",flexDirection:"column",alignItems:"center"}}>
+        <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 2rem 5rem",display:"flex",flexDirection:"column",alignItems:"center"}}>
           <div className="what-divider f4">
             <div className="wd-line" /><span className="wd-label">What you&apos;ll walk away with</span><div className="wd-line" />
           </div>
@@ -540,25 +537,20 @@ export default function Home() {
           <button className="btn-back" onClick={() => goTo("stage")}>← Back</button>
           <QWordmark />
           <div className="progress-track"><div className="progress-fill" style={{width:"44%"}} /></div>
-          <div className="progress-label">Step 1 of 3 — The situation</div>
+          <div className="progress-label">Step 1 of 3: The situation</div>
           <h2 className="big-q">What&apos;s the main reason your loved one needs support right now?</h2>
           <div className="banner">
             <span style={{fontSize:16,flexShrink:0,marginTop:1}}>💡</span>
-            <span className="banner-text">The more you share, the more useful your brief will be — but anything is a good start. Skip anything you&apos;re not ready for.</span>
+            <span className="banner-text">The more you share, the more useful your brief will be. Anything is a good start. Skip anything you&apos;re not ready for.</span>
           </div>
           <div className="field">
             <label className="field-label" htmlFor="situation">The situation</label>
             <textarea id="situation" value={situation} onChange={e => setSituation(e.target.value)} placeholder="e.g. recovering from a stroke, managing late-stage Parkinson's, adjusting after a recent fall..." rows={3} />
             <p style={{fontSize:13,color:"var(--faint)",marginTop:7}}>No names of people, providers, or facilities needed.</p>
           </div>
-          <button className="expand-btn" onClick={() => setQ1Open(o => !o)}>
-            <span className={`expand-chevron${q1Open ? " open" : ""}`}>▶</span> Add more context
-          </button>
-          <div className={`expand-body${q1Open ? " open" : ""}`}>
-            <div className="field">
-              <label className="field-label" htmlFor="situationMore">More detail <span className="opt-tag">Optional</span></label>
-              <textarea id="situationMore" value={situationMore} onChange={e => setSituationMore(e.target.value)} placeholder="How long has this been going on? What recently changed? What should a new helper know right away?" rows={3} />
-            </div>
+          <div className="field">
+            <label className="field-label" htmlFor="situationMore">More detail <span className="opt-tag">Optional</span></label>
+            <textarea id="situationMore" value={situationMore} onChange={e => setSituationMore(e.target.value)} placeholder="How long has this been going on? What recently changed? What should a new helper know right away?" rows={3} />
           </div>
           <button className="btn-primary" onClick={() => goTo("q2")}>Continue →</button>
           <button className="btn-ghost" onClick={() => goTo("q2")}>Skip for now</button>
@@ -571,9 +563,9 @@ export default function Home() {
           <button className="btn-back" onClick={() => goTo("q1")}>← Back</button>
           <QWordmark />
           <div className="progress-track"><div className="progress-fill" style={{width:"68%"}} /></div>
-          <div className="progress-label">Step 2 of 3 — Medical overview</div>
+          <div className="progress-label">Step 2 of 3: Medical overview</div>
           <h2 className="big-q">What conditions or diagnoses have they been given?</h2>
-          <p className="q-sub">Condition names only — no record numbers, insurance IDs, or personal identifiers needed.</p>
+          <p className="q-sub">Condition names only. No record numbers, insurance IDs, or personal identifiers needed.</p>
           <div className="fhir-prefill-card">
             <div className="fhir-prefill-label">Optional: pre-fill from a patient ID</div>
             <div className="fhir-prefill-row">
@@ -595,22 +587,17 @@ export default function Home() {
             <label className="field-label" htmlFor="medical">Conditions</label>
             <textarea id="medical" value={medical} onChange={e => setMedical(e.target.value)} placeholder="e.g. diabetes, congestive heart failure, dementia, Parkinson's..." rows={3} />
           </div>
-          <button className="expand-btn" onClick={() => setQ2Open(o => !o)}>
-            <span className={`expand-chevron${q2Open ? " open" : ""}`}>▶</span> Add medications, allergies, or recent changes
-          </button>
-          <div className={`expand-body${q2Open ? " open" : ""}`}>
-            <div className="field">
-              <label className="field-label" htmlFor="medications">Medications <span className="opt-tag">Optional</span></label>
-              <textarea id="medications" value={medications} onChange={e => setMedications(e.target.value)} placeholder="Drug name + how often — e.g. Lisinopril once daily, Metformin twice with meals..." rows={3} />
-            </div>
-            <div className="field">
-              <label className="field-label" htmlFor="allergies">Known allergies <span className="opt-tag">Optional</span></label>
-              <textarea id="allergies" value={allergies} onChange={e => setAllergies(e.target.value)} placeholder="Substance names only..." rows={2} />
-            </div>
-            <div className="field">
-              <label className="field-label" htmlFor="recentChanges">Anything changed recently? <span className="opt-tag">Optional</span></label>
-              <textarea id="recentChanges" value={recentChanges} onChange={e => setRecentChanges(e.target.value)} placeholder="New diagnosis, recent hospitalization, change in care plan..." rows={2} />
-            </div>
+          <div className="field">
+            <label className="field-label" htmlFor="medications">Medications <span className="opt-tag">Optional</span></label>
+            <textarea id="medications" value={medications} onChange={e => setMedications(e.target.value)} placeholder="Drug name and how often, e.g. Lisinopril once daily, Metformin twice with meals..." rows={3} />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="allergies">Known allergies <span className="opt-tag">Optional</span></label>
+            <textarea id="allergies" value={allergies} onChange={e => setAllergies(e.target.value)} placeholder="Substance names only..." rows={2} />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="recentChanges">Anything changed recently? <span className="opt-tag">Optional</span></label>
+            <textarea id="recentChanges" value={recentChanges} onChange={e => setRecentChanges(e.target.value)} placeholder="New diagnosis, recent hospitalization, change in care plan..." rows={2} />
           </div>
           <button className="btn-primary" onClick={() => goTo("q3")}>Continue →</button>
           <button className="btn-ghost" onClick={() => goTo("q3")}>Skip for now</button>
@@ -623,11 +610,11 @@ export default function Home() {
           <button className="btn-back" onClick={() => goTo("q2")}>← Back</button>
           <QWordmark />
           <div className="progress-track"><div className="progress-fill" style={{width:"90%"}} /></div>
-          <div className="progress-label">Step 3 of 3 — Just for you</div>
+          <div className="progress-label">Step 3 of 3: Just for you</div>
           <h2 className="big-q">How are you doing in all of this?</h2>
           <div className="banner warm">
             <span style={{fontSize:16,flexShrink:0,marginTop:1}}>🌿</span>
-            <span className="banner-text">This section is just for you. Your answers won&apos;t appear in the brief you share — they go on a private page that&apos;s only yours.</span>
+            <span className="banner-text">This section is just for you. Your answers won&apos;t appear in the brief you share. They go on a private page that&apos;s only yours.</span>
           </div>
           {error && <div className="error-banner">{error}</div>}
           <div className="check-list">
@@ -724,11 +711,11 @@ export default function Home() {
           )}
 
           <div className="disclosure">
-            Generated with AI assistance on {dateStr}. For organizational purposes only. Not a medical record. Not a substitute for professional medical or legal advice. AI can make mistakes — always review before sharing.
+            Generated with AI assistance on {dateStr}. For organizational purposes only. Not a medical record. Not a substitute for professional medical or legal advice.
           </div>
 
           <div className="no-print" style={{marginTop:"2rem",display:"flex",flexDirection:"column" as const,gap:10}}>
-            <p style={{fontSize:12,color:"var(--faint)",marginBottom:8}}>File will save as caregiver_brief when printed to PDF</p>
+            <p style={{fontSize:13,color:"var(--muted)",marginBottom:8}}>Review everything before sharing. AI can make mistakes.</p>
             <button className="btn-primary" onClick={() => window.print()}>Print or save as PDF</button>
             <button className="btn-ghost" onClick={reset}>Start over</button>
           </div>
