@@ -509,6 +509,9 @@ export default function Home() {
           <p style={{fontSize:13,color:"var(--muted)",marginTop:"2rem",textAlign:"center" as const}}>
             <a href="/privacy" style={{color:"var(--muted)",textDecoration:"underline"}}>Privacy, HIPAA & compliance information</a>
           </p>
+          <p style={{fontSize:13,color:"var(--muted)",marginTop:"0.5rem",textAlign:"center" as const}}>
+            <a href="/whats-next" style={{color:"var(--burg)",textDecoration:"none",fontWeight:500}}>Try the 30-day action plan generator →</a>
+          </p>
         </div>
         </>
       )}
