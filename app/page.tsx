@@ -4,7 +4,7 @@ import { useState } from "react";
 import { fetchPatientMedications, fetchPatientConditions } from "@/lib/fhir";
 
 type Stage = "Active care" | "Palliative care" | "Hospice care" | "Bereavement";
-type Step = "hero" | "stage" | "q1" | "q2" | "q2b" | "q3" | "q4" | "loading" | "brief";
+type Step = "hero" | "stage" | "q1" | "q2" | "q2b" | "q2c" | "q3" | "q4" | "loading" | "brief";
 
 interface Brief {
   atAGlance: string;
@@ -52,6 +52,13 @@ const CONDITION_CHIPS = [
   "Other",
 ];
 
+const CAREGIVER_ROLES = [
+  "I'm the only one doing this",
+  "I have some help but I'm mostly managing alone",
+  "There are a few of us sharing the responsibility",
+  "I'm coordinating care from a distance",
+];
+
 const WELLBEING_OPTIONS = [
   { value: "exhausted", label: "I'm exhausted but keeping it together" },
   { value: "grief",     label: "Grief that has already started, even though they're still here" },
@@ -71,11 +78,11 @@ const WN_CONCERNS = [
   "Coordinating with family",
 ];
 
-const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }[]> = {
+const TIMELINE: Record<Stage, { period: string; subtitle: string; items: string[] }[]> = {
   "Active care": [
     {
       period: "Today",
-      intro: "These are the only things worth thinking about right now.",
+      subtitle: "The only things that matter right now",
       items: [
         "Write down your loved one's current medications and conditions",
         "Identify one family member or friend who can share the load",
@@ -84,7 +91,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Days 1–3",
-      intro: "Small steps that create a foundation for the weeks ahead.",
+      subtitle: "Small steps that create a foundation",
       items: [
         "Schedule a conversation with their primary care provider",
         "Set up a simple medication tracking system",
@@ -93,7 +100,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Days 4–7",
-      intro: "Building more consistency and getting more support in place.",
+      subtitle: "Starting to build a rhythm",
       items: [
         "Research whether a home health aide is needed",
         "Ask their doctor about what to expect in coming weeks",
@@ -102,7 +109,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Week 2+",
-      intro: "Stepping back to review and put longer-term support in place.",
+      subtitle: "Looking a little further ahead",
       items: [
         "Connect with a caregiver support group. Online counts.",
         "Review insurance coverage for home care or specialist visits",
@@ -113,7 +120,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
   "Palliative care": [
     {
       period: "Today",
-      intro: "These are the only things worth thinking about right now.",
+      subtitle: "The only things that matter right now",
       items: [
         "Ask the palliative care team what comfort means for your loved one right now",
         "Write down what a good day looks like for them",
@@ -122,7 +129,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Days 1–3",
-      intro: "Small steps to get more support in place.",
+      subtitle: "Small steps that create a foundation",
       items: [
         "Ask about a hospice or palliative social worker. Their job is to help families like yours.",
         "Clarify what medications are for comfort vs. treatment",
@@ -131,7 +138,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Days 4–7",
-      intro: "Building more clarity around comfort and communication.",
+      subtitle: "Starting to build a rhythm",
       items: [
         "Have one honest conversation with your loved one about what they want, if they are able",
         "Identify who in the family needs to be kept informed and how",
@@ -140,7 +147,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Week 2+",
-      intro: "Looking ahead with the right support around you.",
+      subtitle: "Looking a little further ahead",
       items: [
         "Ask about advance directives if not already in place. caringinfo.org has free resources.",
         "Plan for respite. Even a few hours matters.",
@@ -151,7 +158,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
   "Hospice care": [
     {
       period: "Today",
-      intro: "These are the only things worth thinking about right now.",
+      subtitle: "The only things that matter right now",
       items: [
         "Ask the hospice team what to expect in the coming days and weeks",
         "Make sure everyone who needs to be there knows how to get there",
@@ -160,7 +167,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Days 1–3",
-      intro: "Small steps to make sure nothing important is missed.",
+      subtitle: "Small steps that create a foundation",
       items: [
         "Ask the hospice social worker about grief resources for family members",
         "Clarify what the hospice team handles vs. what falls to you",
@@ -169,7 +176,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Days 4–7",
-      intro: "Focusing on what you can control, and letting go of the rest.",
+      subtitle: "Starting to build a rhythm",
       items: [
         "Designate one family member as the primary contact for updates",
         "Allow yourself to grieve. You don't have to wait.",
@@ -178,7 +185,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Week 2+",
-      intro: "Allowing yourself to be held through what comes next.",
+      subtitle: "Looking a little further ahead",
       items: [
         "Take care of practical documents if not already done",
         "Stay connected to the hospice social worker",
@@ -189,7 +196,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
   "Bereavement": [
     {
       period: "Today",
-      intro: "There is nothing you have to do today except be here.",
+      subtitle: "There is nothing you have to do today except be here",
       items: [
         "You don't have to do anything today except be",
         "Call one person who can sit with you, even quietly",
@@ -198,7 +205,7 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Days 1–3",
-      intro: "Small steps. That's all. One at a time.",
+      subtitle: "Small steps. That's all.",
       items: [
         "Handle only what is truly urgent. Most things can wait.",
         "Eat something. Sleep if you can. Ask for help with both.",
@@ -207,18 +214,18 @@ const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }
     },
     {
       period: "Days 4–7",
-      intro: "Grief doesn't follow a timeline. Neither should you.",
+      subtitle: "Grief doesn't follow a timeline. Neither should you.",
       items: [
-        "Look into bereavement support — GriefShare, hospice bereavement programs, or a therapist",
+        "Look into bereavement support: GriefShare, hospice bereavement programs, or a therapist",
         "Begin notifying institutions only as you have energy",
         "Know that grief is not linear and there is no timeline you have to follow",
       ],
     },
     {
       period: "Week 2+",
-      intro: "Finding the support and community that can hold you through this.",
+      subtitle: "Finding support that can hold you through this",
       items: [
-        "Consider a grief group — being with others who understand is powerful",
+        "Consider a grief group. Being with others who understand is powerful.",
         "Be patient with yourself as your identity shifts outside the caregiving role",
         "The Family Caregiver Alliance (caregiver.org) has bereavement resources specifically for former caregivers",
       ],
@@ -234,6 +241,18 @@ const RESOURCES = [
   { name: "AARP Caregiver Support", desc: "Local and virtual caregiver support groups, articles, and a helpline.", url: "https://aarp.org/caregiving" },
 ];
 
+function planTitle(concern: string | null): string {
+  if (!concern) return "Your 30-Day Action Plan";
+  const map: Record<string, string> = {
+    "Medical decisions and next steps":  "Your 30-Day Medical Navigation Plan",
+    "Insurance and financial concerns":  "Your 30-Day Financial Navigation Plan",
+    "Daily caregiving logistics":        "Your 30-Day Care Logistics Plan",
+    "Emotional support":                 "Your 30-Day Emotional Support Plan",
+    "Coordinating with family":          "Your 30-Day Family Coordination Plan",
+  };
+  return map[concern] ?? "Your 30-Day Action Plan";
+}
+
 export default function Home() {
   const [step, setStep]                         = useState<Step>("hero");
   const [stage, setStage]                       = useState<Stage | null>(null);
@@ -246,6 +265,8 @@ export default function Home() {
   const [hadRecentChanges, setHadRecentChanges] = useState<boolean | null>(null);
   const [medsOpen, setMedsOpen]                 = useState(false);
   const [allergiesOpen, setAllergiesOpen]       = useState(false);
+  const [fhirOpen, setFhirOpen]                 = useState(false);
+  const [caregiverRole, setCaregiverRole]       = useState("");
   const [wellbeing, setWellbeing]               = useState<string[]>([]);
   const [brief, setBrief]                       = useState<Brief | null>(null);
   const [error, setError]                       = useState<string | null>(null);
@@ -309,12 +330,19 @@ export default function Home() {
             situationMore: "",
             medical, medications, allergies, recentChanges,
             caregiverWellbeing: wellbeing.join(", "),
+            caregiverRole,
+            concern: wnConcern,
           }),
         }),
         fetch("/api/whats-next", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ careStage: stage, concern: wnConcern }),
+          body: JSON.stringify({
+            careStage: stage,
+            concern: wnConcern,
+            condition: medical,
+            caregiverRole,
+          }),
         }),
       ]);
       if (!briefRes.ok) throw new Error("Generation failed");
@@ -336,6 +364,7 @@ export default function Home() {
     setSituationChoice(""); setSituationOther("");
     setMedical(""); setMedications(""); setAllergies(""); setRecentChanges("");
     setHadRecentChanges(null); setMedsOpen(false); setAllergiesOpen(false);
+    setFhirOpen(false); setCaregiverRole("");
     setWellbeing([]); setBrief(null); setError(null);
     setFhirId(""); setFhirLoading(false); setFhirError(null); setFhirLoaded(false);
     setWnConcern(null); setWnPlan(null);
@@ -487,20 +516,16 @@ export default function Home() {
 
         /* ── Questionnaire ── */
         .q-wrap { max-width: 660px; margin: 0 auto; padding: 2.5rem 2rem 6rem; }
-        .q-wm   { display: flex; align-items: center; gap: 8px; margin-bottom: 2rem; }
         .q-wm-icon { width: 26px; height: 26px; background: var(--burg); border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .q-wm-name { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 500; color: var(--ink); letter-spacing: 0.04em; }
         .progress-track { height: 3px; background: var(--border-soft); border-radius: 100px; overflow: hidden; margin-bottom: 7px; }
         .progress-fill  { height: 100%; background: var(--burg); border-radius: 100px; transition: width 0.4s ease; }
         .progress-label { font-size: 12px; color: var(--faint); margin-bottom: 2.5rem; }
         .big-q { font-family: 'Cormorant Garamond', serif; font-size: clamp(22px,4vw,30px); font-weight: 500; color: var(--ink); line-height: 1.35; margin-bottom: 0.75rem; letter-spacing: -0.01em; }
         .q-sub { font-size: 15px; color: var(--muted); line-height: 1.6; margin-bottom: 1.75rem; }
 
-        /* Banner — neutral info, no colored border */
+        /* Banner */
         .banner { display: flex; gap: 12px; align-items: flex-start; background: #FAF7F4; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 1.75rem; }
         .banner-text { font-size: 14px; color: var(--ink-soft); line-height: 1.6; }
-        .banner.warm { background: #FAF7F4; }
-        .banner.warm .banner-text { color: var(--ink-soft); }
 
         /* Stage / situation buttons */
         .stage-grid { display: flex; flex-direction: column; gap: 10px; }
@@ -512,7 +537,7 @@ export default function Home() {
         .s-check { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
         .stage-btn.sel .s-check { background: var(--burg); border-color: var(--burg); }
 
-        /* Situation options — same visual as stage-btn */
+        /* Situation pills */
         .sit-grid { display: flex; flex-direction: column; gap: 10px; }
         .sit-btn { width: 100%; text-align: left; padding: 15px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 14px; transition: all 0.15s; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--ink-soft); }
         .sit-btn:hover { border-color: var(--burg-border); background: var(--burg-light); color: var(--burg); }
@@ -552,13 +577,13 @@ export default function Home() {
         .btn-primary:focus-visible { outline: 3px solid var(--burg); outline-offset: 3px; }
         .btn-ghost { display: block; width: 100%; padding: 15px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 16px; cursor: pointer; margin-top: 10px; transition: all 0.15s; text-align: center; }
         .btn-ghost:hover { background: var(--surface); border-color: #bbb; color: var(--ink); }
-
-        /* Back button */
         .btn-back { background: none; border: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; padding: 0; margin-bottom: 1.5rem; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; }
         .btn-back:hover { color: var(--ink); }
 
-        /* FHIR prefill card */
-        .fhir-prefill-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 1.5rem; }
+        /* FHIR — hidden by default, exposed via toggle */
+        .fhir-toggle { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; padding: 0; margin-top: 0.5rem; }
+        .fhir-toggle:hover { color: var(--ink-soft); }
+        .fhir-expanded { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 16px 18px; margin-top: 10px; }
         .fhir-prefill-label { font-size: 12px; font-weight: 500; color: var(--faint); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
         .fhir-prefill-row { display: flex; gap: 8px; }
         .fhir-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); background: var(--surface); }
@@ -567,8 +592,9 @@ export default function Home() {
         .fhir-btn:disabled { background: var(--border); color: var(--faint); cursor: not-allowed; }
         .fhir-error   { font-size: 13px; color: #8B2020; margin-top: 8px; }
         .fhir-success { font-size: 13px; color: #2A6B22; margin-top: 8px; font-weight: 500; }
+        .fhir-note { font-size: 12px; color: var(--faint); margin-top: 8px; line-height: 1.5; }
 
-        /* Error — reserved for actual errors only */
+        /* Error */
         .error-banner { background: #FFF0F0; border: 1px solid #FFC0C0; border-radius: var(--radius-md); padding: 14px 16px; margin-top: 1rem; font-size: 14px; color: #8B2020; }
 
         /* Q2b yes/no */
@@ -591,44 +617,44 @@ export default function Home() {
         /* ── Brief ── */
         .brief-wrap { max-width: 660px; margin: 0 auto; padding: 2.5rem 2rem 6rem; }
         .brief-top { padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-        .brief-top-left { display: flex; flex-direction: column; gap: 2px; }
         .brief-wm  { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; }
         .brief-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
         .brief-meta  { font-size: 14px; color: var(--faint); margin-top: 3px; }
 
-        /* AT A GLANCE — sage green, no border */
+        /* AT A GLANCE — sage green */
         .brief-glance { background: var(--sage-light); border-radius: var(--radius-md); padding: 18px 20px; margin-bottom: 12px; }
         .brief-glance-label { font-size: 11px; font-weight: 600; color: var(--sage-border); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
         .brief-glance-body { font-family: 'Cormorant Garamond', serif; font-size: 17px; color: var(--ink); line-height: 1.7; }
 
-        /* Brief field cards — sage left border, no burg */
+        /* Field cards — sage left border */
         .brief-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--sage-border); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 18px 22px; margin-bottom: 10px; }
         .brief-card-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
         .brief-card-body  { font-size: 16px; color: var(--ink); line-height: 1.75; }
 
-        /* Disclosure */
         .disclosure { font-size: 13px; font-style: italic; color: var(--faint); line-height: 1.6; margin-top: 2rem; }
 
         /* Section divider */
         .section-divider { display: flex; align-items: center; gap: 14px; margin: 2.5rem 0 1.75rem; }
         .section-divider-line { flex: 1; height: 1px; background: var(--border); }
-        .section-divider-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; white-space: nowrap; }
+        .section-divider-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
 
-        /* For the caregiver section */
-        .ftc-section { margin-top: 2rem; }
-        .ftc-ack { font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 400; color: var(--ink-soft); line-height: 1.7; margin-bottom: 2rem; font-style: italic; }
+        /* A note for you — sage card with burgundy left border */
+        .note-card { background: var(--sage-light); border-left: 4px solid var(--burg); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 22px 24px; margin-bottom: 2.25rem; display: flex; gap: 16px; align-items: flex-start; }
+        .note-card-icon { font-size: 20px; flex-shrink: 0; line-height: 1.5; }
+        .note-card-body { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--ink-soft); line-height: 1.75; font-style: italic; }
 
         /* Timeline — guide style */
-        .timeline-period { margin-bottom: 2rem; }
-        .tl-label { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; color: var(--burg); line-height: 1.2; margin-bottom: 5px; }
-        .tl-intro { font-size: 14px; color: var(--muted); font-style: italic; line-height: 1.6; margin-bottom: 12px; }
+        .timeline-period { margin-bottom: 0.5rem; }
+        .tl-section-divider { height: 1px; background: var(--border); margin: 2.25rem 0 1.75rem; }
+        .tl-label { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 500; color: var(--burg); line-height: 1.2; margin-bottom: 5px; }
+        .tl-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
         .tl-items { display: flex; flex-direction: column; gap: 8px; }
-        .tl-item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); }
-        .tl-checkbox { width: 17px; height: 17px; border-radius: 4px; border: 1.5px solid var(--border); flex-shrink: 0; margin-top: 3px; background: white; }
-        .tl-text { font-size: 15px; color: var(--ink-soft); line-height: 1.55; }
+        .tl-item { display: flex; gap: 16px; align-items: flex-start; padding: 16px 18px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); }
+        .action-cb { width: 18px; height: 18px; accent-color: var(--burg); cursor: pointer; flex-shrink: 0; margin-top: 2px; border-radius: 4px; }
+        .tl-text { font-size: 16px; color: var(--ink-soft); line-height: 1.6; }
 
         /* Resources */
-        .resources-section { margin-top: 2rem; }
+        .resources-section { margin-top: 2.25rem; }
         .res-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 500; color: var(--ink); margin-bottom: 1rem; }
         .res-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 10px; }
         .res-name { font-size: 15px; font-weight: 500; color: var(--ink); margin-bottom: 3px; }
@@ -637,17 +663,16 @@ export default function Home() {
         .res-link { font-size: 13px; color: var(--burg); text-decoration: none; font-weight: 500; }
         .res-link:hover { text-decoration: underline; }
 
-        /* 30-Day Action Plan section */
+        /* 30-Day plan section */
         .plan-section { margin-top: 2rem; }
         .plan-concern-tag { font-size: 14px; color: var(--muted); display: block; margin-bottom: 1.25rem; }
         .wn-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--sage-border); border-radius: var(--radius-md); margin-bottom: 14px; overflow: hidden; }
         .wn-card-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border-soft); }
         .wn-card-week { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; color: var(--ink); display: block; line-height: 1.2; }
         .wn-card-sub { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-top: 2px; }
-        .wn-check-row { display: flex; gap: 14px; align-items: flex-start; padding: 13px 20px; border-bottom: 1px solid var(--border-soft); }
+        .wn-check-row { display: flex; gap: 16px; align-items: flex-start; padding: 14px 20px; border-bottom: 1px solid var(--border-soft); }
         .wn-check-row:last-child { border-bottom: none; }
-        .wn-checkbox { width: 17px; height: 17px; border-radius: 4px; border: 1.5px solid var(--sage-border); flex-shrink: 0; margin-top: 3px; background: white; }
-        .wn-check-text { font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
+        .wn-check-text { font-size: 16px; color: var(--ink-soft); line-height: 1.6; }
         .wn-disclaimer { font-size: 13px; font-style: italic; color: var(--faint); line-height: 1.6; margin-top: 1.5rem; }
 
         /* Print button */
@@ -656,7 +681,7 @@ export default function Home() {
 
         /* Print */
         @media print {
-          .hero-bg, .q-wrap .btn-primary, .q-wrap .btn-ghost, .no-print { display: none !important; }
+          .hero-bg, .no-print { display: none !important; }
           .brief-wrap { padding: 1rem; max-width: 100%; }
           .ftc-section { page-break-before: always; }
           .plan-section { page-break-before: always; }
@@ -733,8 +758,8 @@ export default function Home() {
           <div className="what-cards f5">
             {[
               { icon: "🌿", cls: "ic-brief", title: "A Caregiver Brief",   body: "A plain-English summary that any family member, home aide, or new provider can read and immediately understand." },
-              { icon: "🤍", cls: "ic-you",   title: "For the caregiver",   body: "A private page with a day-by-day timeline, emotional resources, and acknowledgment of what you're carrying." },
-              { icon: "📋", cls: "ic-print", title: "Something for today", body: "Print it, share it, or just read it yourself. Organized and ready the moment you're done." },
+              { icon: "🤍", cls: "ic-you",   title: "A note for you",       body: "A private section with a day-by-day timeline, emotional resources, and acknowledgment of what you're carrying." },
+              { icon: "📋", cls: "ic-print", title: "A 30-day plan",        body: "Built around your most pressing concern. Print it, share it, or keep it as a personal roadmap." },
             ].map(c => (
               <div className="what-card" key={c.title}>
                 <div className={`wc-icon ${c.cls}`}>{c.icon}</div>
@@ -763,7 +788,7 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("hero")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"16%"}} /></div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"13%"}} /></div>
           <div className="progress-label">Getting started</div>
           <h2 className="big-q">Where are you right now?</h2>
           <p className="q-sub">This shapes your brief and the questions we ask. There are no wrong answers.</p>
@@ -786,8 +811,8 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("stage")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"32%"}} /></div>
-          <div className="progress-label">Step 1 of 5: The situation</div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"26%"}} /></div>
+          <div className="progress-label">Step 1 of 6: The situation</div>
           <h2 className="big-q">What best describes the situation right now?</h2>
           <p className="q-sub">Pick the one that fits closest. You can add details on the next screen.</p>
           <div className="sit-grid">
@@ -828,22 +853,10 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("q1")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"48%"}} /></div>
-          <div className="progress-label">Step 2 of 5: Medical overview</div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"39%"}} /></div>
+          <div className="progress-label">Step 2 of 6: Medical overview</div>
           <h2 className="big-q">What do we need to know medically?</h2>
           <p className="q-sub">Condition names only. No record numbers or personal identifiers needed.</p>
-
-          <div className="fhir-prefill-card">
-            <div className="fhir-prefill-label">Optional: pre-fill from a patient ID</div>
-            <div className="fhir-prefill-row">
-              <input type="text" className="fhir-input" placeholder="Patient ID" value={fhirId} onChange={e => setFhirId(e.target.value)} />
-              <button className="fhir-btn" onClick={loadFhir} disabled={fhirLoading}>
-                {fhirLoading ? "Loading..." : "Pre-fill"}
-              </button>
-            </div>
-            {fhirError && <p className="fhir-error">{fhirError}</p>}
-            {fhirLoaded && <p className="fhir-success">Fields pre-filled. Review and edit below.</p>}
-          </div>
 
           <div className="field">
             <label className="field-label" htmlFor="medical">What condition or diagnosis are you managing?</label>
@@ -899,6 +912,37 @@ export default function Home() {
             }
           </div>
 
+          {/* FHIR toggle — hidden from standard flow, visible for providers */}
+          <div style={{marginBottom:"1.25rem"}}>
+            <button
+              className="fhir-toggle"
+              onClick={() => setFhirOpen(o => !o)}
+              type="button"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {fhirOpen
+                  ? <path d="M18 15l-6-6-6 6"/>
+                  : <path d="M6 9l6 6 6-6"/>
+                }
+              </svg>
+              Are you a care coordinator or healthcare provider? Pre-fill from a patient record.
+            </button>
+            {fhirOpen && (
+              <div className="fhir-expanded">
+                <div className="fhir-prefill-label">Patient ID (FHIR sandbox)</div>
+                <div className="fhir-prefill-row">
+                  <input type="text" className="fhir-input" placeholder="Patient ID" value={fhirId} onChange={e => setFhirId(e.target.value)} />
+                  <button className="fhir-btn" onClick={loadFhir} disabled={fhirLoading}>
+                    {fhirLoading ? "Loading..." : "Pre-fill"}
+                  </button>
+                </div>
+                {fhirError && <p className="fhir-error">{fhirError}</p>}
+                {fhirLoaded && <p className="fhir-success">Fields pre-filled. Review and edit below.</p>}
+                <p className="fhir-note">This connects to a FHIR R4 sandbox environment. No data is stored.</p>
+              </div>
+            )}
+          </div>
+
           <button className="btn-primary" onClick={() => goTo("q2b")}>Continue →</button>
           <button className="btn-ghost" onClick={() => goTo("q2b")}>Skip for now</button>
         </div>
@@ -909,8 +953,8 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("q2")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"64%"}} /></div>
-          <div className="progress-label">Step 3 of 5: Recent changes</div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"52%"}} /></div>
+          <div className="progress-label">Step 3 of 6: Recent changes</div>
           <h2 className="big-q">Has anything changed recently that we should know about?</h2>
           <p className="q-sub">A new diagnosis, a recent hospitalization, a shift in their condition. Anything that feels significant.</p>
           <div className="yn-row">
@@ -922,7 +966,7 @@ export default function Home() {
             </button>
             <button
               className={`yn-btn${hadRecentChanges === false ? " sel" : ""}`}
-              onClick={() => { setHadRecentChanges(false); goTo("q3"); }}
+              onClick={() => { setHadRecentChanges(false); goTo("q2c"); }}
             >
               No
             </button>
@@ -939,21 +983,45 @@ export default function Home() {
                   rows={3}
                 />
               </div>
-              <button className="btn-primary" onClick={() => goTo("q3")}>Continue →</button>
+              <button className="btn-primary" onClick={() => goTo("q2c")}>Continue →</button>
             </>
           )}
+        </div>
+      )}
+
+      {/* ═══ Q2c — Caregiving role ═══ */}
+      {step === "q2c" && (
+        <div className="q-wrap">
+          <button className="btn-back" onClick={() => goTo("q2b")}>← Back</button>
+          <QWordmark />
+          <div className="progress-track"><div className="progress-fill" style={{width:"65%"}} /></div>
+          <div className="progress-label">Step 4 of 6: Your situation</div>
+          <h2 className="big-q">What&apos;s your caregiving situation like right now?</h2>
+          <p className="q-sub">This helps us give you more realistic guidance.</p>
+          <div className="stage-grid">
+            {CAREGIVER_ROLES.map(r => (
+              <button key={r} className={`stage-btn${caregiverRole === r ? " sel" : ""}`} onClick={() => setCaregiverRole(r)}>
+                <div><div className="s-name">{r}</div></div>
+                <div className="s-check">
+                  {caregiverRole === r && <svg width="10" height="8" viewBox="0 0 12 9" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4.5L4.5 8 11 1"/></svg>}
+                </div>
+              </button>
+            ))}
+          </div>
+          <button className="btn-primary" disabled={!caregiverRole} onClick={() => goTo("q3")}>Continue →</button>
+          <button className="btn-ghost" onClick={() => goTo("q3")}>Skip for now</button>
         </div>
       )}
 
       {/* ═══ Q3 — Wellbeing ═══ */}
       {step === "q3" && (
         <div className="q-wrap">
-          <button className="btn-back" onClick={() => goTo("q2b")}>← Back</button>
+          <button className="btn-back" onClick={() => goTo("q2c")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"80%"}} /></div>
-          <div className="progress-label">Step 4 of 5: Just for you</div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"78%"}} /></div>
+          <div className="progress-label">Step 5 of 6: Just for you</div>
           <h2 className="big-q">How are you doing in all of this?</h2>
-          <div className="banner warm">
+          <div className="banner">
             <span style={{fontSize:16,flexShrink:0,marginTop:1}}>🌿</span>
             <span className="banner-text">This part is just for you. Nothing you share here shows up in the brief.</span>
           </div>
@@ -975,8 +1043,8 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("q3")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"96%"}} /></div>
-          <div className="progress-label">Step 5 of 5: Your priority</div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"91%"}} /></div>
+          <div className="progress-label">Step 6 of 6: Your priority</div>
           <h2 className="big-q">What would help most right now?</h2>
           <p className="q-sub">We&apos;ll build your 30-day action plan around your answer.</p>
           {error && <div className="error-banner" style={{marginBottom:"1.5rem"}}>{error}</div>}
@@ -1014,7 +1082,7 @@ export default function Home() {
 
           {/* Header */}
           <div className="brief-top">
-            <div className="brief-top-left">
+            <div>
               <div className="brief-wm">
                 <div className="q-wm-icon">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FAF0F1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -1032,13 +1100,13 @@ export default function Home() {
             </button>
           </div>
 
-          {/* AT A GLANCE — sage green */}
+          {/* AT A GLANCE */}
           <div className="brief-glance">
             <div className="brief-glance-label">At a glance</div>
             <div className="brief-glance-body">{brief.atAGlance}</div>
           </div>
 
-          {/* Field cards — sage left border */}
+          {/* Field cards */}
           {brief.careStage && <BriefCard label="Care stage" body={brief.careStage} />}
           {brief.conditions && <BriefCard label="Conditions" body={brief.conditions} />}
           {brief.medications && <BriefCard label="Medications" body={brief.medications} />}
@@ -1048,29 +1116,41 @@ export default function Home() {
           {brief.comfortGoals && <BriefCard label="Comfort and care goals" body={brief.comfortGoals} />}
           {brief.importantNotes && <BriefCard label="Recent changes and notes" body={brief.importantNotes} />}
 
-          {/* For the caregiver — subtle divider, guide-style timeline */}
+          {/* A note for you */}
           {stage && (
             <div className="ftc-section">
               <div className="section-divider">
                 <div className="section-divider-line" />
-                <span className="section-divider-label">For you</span>
+                <span className="section-divider-label">
+                  <span>🌿</span>
+                  A note for you
+                </span>
                 <div className="section-divider-line" />
               </div>
 
-              {brief.forYou && <p className="ftc-ack">{brief.forYou}</p>}
+              {brief.forYou && (
+                <div className="note-card">
+                  <span className="note-card-icon">🌿</span>
+                  <div className="note-card-body">{brief.forYou}</div>
+                </div>
+              )}
 
+              {/* Timeline — guide style */}
               <div style={{marginBottom:"1.5rem"}}>
-                {TIMELINE[stage].map(block => (
-                  <div className="timeline-period" key={block.period}>
-                    <div className="tl-label">{block.period}</div>
-                    <p className="tl-intro">{block.intro}</p>
-                    <div className="tl-items">
-                      {block.items.map(item => (
-                        <div className="tl-item" key={item}>
-                          <div className="tl-checkbox" aria-hidden="true" />
-                          <div className="tl-text">{item}</div>
-                        </div>
-                      ))}
+                {TIMELINE[stage].map((block, idx) => (
+                  <div key={block.period}>
+                    {idx > 0 && <div className="tl-section-divider" />}
+                    <div className="timeline-period">
+                      <div className="tl-label">{block.period}</div>
+                      <div className="tl-subtitle">{block.subtitle}</div>
+                      <div className="tl-items">
+                        {block.items.map(item => (
+                          <div className="tl-item" key={item}>
+                            <input type="checkbox" className="action-cb" aria-label={item} />
+                            <div className="tl-text">{item}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1096,12 +1176,12 @@ export default function Home() {
             Generated with AI assistance on {dateStr}. For organizational purposes only. Not a medical record. Not a substitute for professional medical or legal advice.
           </p>
 
-          {/* 30-Day Action Plan */}
+          {/* 30-Day Plan */}
           {wnPlan && (
             <div className="plan-section">
               <div className="section-divider">
                 <div className="section-divider-line" />
-                <span className="section-divider-label">Your 30-Day Action Plan</span>
+                <span className="section-divider-label">{planTitle(wnConcern)}</span>
                 <div className="section-divider-line" />
               </div>
 
@@ -1114,7 +1194,7 @@ export default function Home() {
                 </div>
                 {wnPlan.week1.map((item, i) => (
                   <div className="wn-check-row" key={i}>
-                    <div className="wn-checkbox" aria-hidden="true" />
+                    <input type="checkbox" className="action-cb" aria-label={item} />
                     <div className="wn-check-text">{item}</div>
                   </div>
                 ))}
@@ -1127,7 +1207,7 @@ export default function Home() {
                 </div>
                 {wnPlan.weeks23.map((item, i) => (
                   <div className="wn-check-row" key={i}>
-                    <div className="wn-checkbox" aria-hidden="true" />
+                    <input type="checkbox" className="action-cb" aria-label={item} />
                     <div className="wn-check-text">{item}</div>
                   </div>
                 ))}
@@ -1140,7 +1220,7 @@ export default function Home() {
                 </div>
                 {wnPlan.week4.map((item, i) => (
                   <div className="wn-check-row" key={i}>
-                    <div className="wn-checkbox" aria-hidden="true" />
+                    <input type="checkbox" className="action-cb" aria-label={item} />
                     <div className="wn-check-text">{item}</div>
                   </div>
                 ))}
