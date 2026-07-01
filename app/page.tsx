@@ -4,7 +4,7 @@ import { useState } from "react";
 import { fetchPatientMedications, fetchPatientConditions } from "@/lib/fhir";
 
 type Stage = "Active care" | "Palliative care" | "Hospice care" | "Bereavement";
-type Step = "hero" | "stage" | "q1" | "q2" | "q3" | "loading" | "brief";
+type Step = "hero" | "stage" | "q1" | "q2" | "q2b" | "q3" | "loading" | "brief";
 
 interface Brief {
   atAGlance: string;
@@ -31,6 +31,17 @@ const STAGES: { id: Stage; desc: string }[] = [
   { id: "Hospice care",    desc: "End of life support and presence" },
   { id: "Bereavement",     desc: "Navigating life after a recent loss" },
 ];
+
+const SITUATION_OPTIONS = [
+  "Recent diagnosis",
+  "Recovering from surgery or hospitalization",
+  "Managing a chronic or progressive condition",
+  "Condition has recently gotten worse",
+  "End of life planning has begun",
+  "Something else",
+];
+
+const CONDITION_CHIPS = ["Diabetes", "Dementia", "Heart failure", "Parkinson's", "Cancer", "COPD", "Stroke"];
 
 const WELLBEING_OPTIONS = [
   { value: "exhausted", label: "I'm exhausted but keeping it together" },
@@ -87,27 +98,30 @@ const WN_CONCERNS = [
 ];
 
 export default function Home() {
-  const [step, setStep]                   = useState<Step>("hero");
-  const [stage, setStage]                 = useState<Stage | null>(null);
-  const [situation, setSituation]         = useState("");
-  const [situationMore, setSituationMore] = useState("");
-  const [medical, setMedical]             = useState("");
-  const [medications, setMedications]     = useState("");
-  const [allergies, setAllergies]         = useState("");
-  const [recentChanges, setRecentChanges] = useState("");
-  const [wellbeing, setWellbeing]         = useState<string[]>([]);
-  const [brief, setBrief]                 = useState<Brief | null>(null);
-  const [error, setError]                 = useState<string | null>(null);
-  const [fhirId, setFhirId]               = useState("");
-  const [fhirLoading, setFhirLoading]     = useState(false);
-  const [fhirError, setFhirError]         = useState<string | null>(null);
-  const [fhirLoaded, setFhirLoaded]       = useState(false);
-  const [wnConcern, setWnConcern]         = useState<string | null>(null);
-  const [wnHours, setWnHours]             = useState("");
-  const [wnIsPrimary, setWnIsPrimary]     = useState<boolean | null>(null);
-  const [wnPlan, setWnPlan]               = useState<WnPlan | null>(null);
-  const [wnLoading, setWnLoading]         = useState(false);
-  const [wnError, setWnError]             = useState<string | null>(null);
+  const [step, setStep]                         = useState<Step>("hero");
+  const [stage, setStage]                       = useState<Stage | null>(null);
+  const [situationChoice, setSituationChoice]   = useState("");
+  const [situationOther, setSituationOther]     = useState("");
+  const [medical, setMedical]                   = useState("");
+  const [medications, setMedications]           = useState("");
+  const [allergies, setAllergies]               = useState("");
+  const [recentChanges, setRecentChanges]       = useState("");
+  const [hadRecentChanges, setHadRecentChanges] = useState<boolean | null>(null);
+  const [medsOpen, setMedsOpen]                 = useState(false);
+  const [allergiesOpen, setAllergiesOpen]       = useState(false);
+  const [wellbeing, setWellbeing]               = useState<string[]>([]);
+  const [brief, setBrief]                       = useState<Brief | null>(null);
+  const [error, setError]                       = useState<string | null>(null);
+  const [fhirId, setFhirId]                     = useState("");
+  const [fhirLoading, setFhirLoading]           = useState(false);
+  const [fhirError, setFhirError]               = useState<string | null>(null);
+  const [fhirLoaded, setFhirLoaded]             = useState(false);
+  const [wnConcern, setWnConcern]               = useState<string | null>(null);
+  const [wnHours, setWnHours]                   = useState("");
+  const [wnIsPrimary, setWnIsPrimary]           = useState<boolean | null>(null);
+  const [wnPlan, setWnPlan]                     = useState<WnPlan | null>(null);
+  const [wnLoading, setWnLoading]               = useState(false);
+  const [wnError, setWnError]                   = useState<string | null>(null);
 
   function goTo(s: Step) {
     setStep(s);
@@ -115,9 +129,14 @@ export default function Home() {
   }
 
   function toggleWellbeing(val: string) {
-    setWellbeing(prev =>
-      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
-    );
+    setWellbeing(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  }
+
+  function addConditionChip(chip: string) {
+    setMedical(prev => {
+      const t = prev.trim();
+      return t ? `${t}, ${chip}` : chip;
+    });
   }
 
   async function loadFhir() {
@@ -151,7 +170,9 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stage, situation, situationMore,
+          stage,
+          situation: situationChoice === "Something else" ? situationOther : situationChoice,
+          situationMore: "",
           medical, medications, allergies, recentChanges,
           caregiverWellbeing: wellbeing.join(", "),
         }),
@@ -167,8 +188,10 @@ export default function Home() {
   }
 
   function reset() {
-    setStep("hero"); setStage(null); setSituation(""); setSituationMore("");
+    setStep("hero"); setStage(null);
+    setSituationChoice(""); setSituationOther("");
     setMedical(""); setMedications(""); setAllergies(""); setRecentChanges("");
+    setHadRecentChanges(null); setMedsOpen(false); setAllergiesOpen(false);
     setWellbeing([]); setBrief(null); setError(null);
     setFhirId(""); setFhirLoading(false); setFhirError(null); setFhirLoaded(false);
     setWnConcern(null); setWnHours(""); setWnIsPrimary(null);
@@ -221,6 +244,8 @@ export default function Home() {
           --burg-deep:    #591E26;
           --burg-light:   #F5EAEB;
           --burg-border:  #D4A8AC;
+          --sage-light:   #EDF4EC;
+          --sage-border:  #7DAA74;
           --ink:          #1C1C1C;
           --ink-soft:     #3A3530;
           --muted:        #6E6560;
@@ -355,13 +380,13 @@ export default function Home() {
         .big-q { font-family: 'Cormorant Garamond', serif; font-size: clamp(22px,4vw,30px); font-weight: 500; color: var(--ink); line-height: 1.35; margin-bottom: 0.75rem; letter-spacing: -0.01em; }
         .q-sub { font-size: 15px; color: var(--muted); line-height: 1.6; margin-bottom: 1.75rem; }
 
-        /* Banner */
-        .banner { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 1.75rem; }
-        .banner-text { font-size: 14px; color: var(--muted); line-height: 1.55; }
-        .banner.warm { background: #F8F2F3; border-color: var(--burg-border); }
-        .banner.warm .banner-text { color: #6B3A40; }
+        /* Banner — neutral info card, no colored border */
+        .banner { display: flex; gap: 12px; align-items: flex-start; background: #FAF7F4; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 1.75rem; }
+        .banner-text { font-size: 14px; color: var(--ink-soft); line-height: 1.6; }
+        .banner.warm { background: #FAF7F4; }
+        .banner.warm .banner-text { color: var(--ink-soft); }
 
-        /* Stage buttons */
+        /* Stage / situation buttons */
         .stage-grid { display: flex; flex-direction: column; gap: 10px; }
         .stage-btn { width: 100%; text-align: left; padding: 17px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 14px; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
         .stage-btn:hover { border-color: var(--burg-border); background: var(--burg-light); }
@@ -371,19 +396,30 @@ export default function Home() {
         .s-check { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
         .stage-btn.sel .s-check { background: var(--burg); border-color: var(--burg); }
 
+        /* Situation options (Q1 — same visual as stage-btn) */
+        .sit-grid { display: flex; flex-direction: column; gap: 10px; }
+        .sit-btn { width: 100%; text-align: left; padding: 15px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 14px; transition: all 0.15s; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--ink-soft); }
+        .sit-btn:hover { border-color: var(--burg-border); background: var(--burg-light); color: var(--burg); }
+        .sit-btn.sel { border: 2px solid var(--burg); background: var(--burg-light); color: var(--burg); }
+
+        /* Condition chips */
+        .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .chip { padding: 5px 13px; background: var(--surface-alt); border: 1px solid var(--border-soft); border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink-soft); cursor: pointer; transition: all 0.15s; }
+        .chip:hover { border-color: var(--burg-border); background: var(--burg-light); color: var(--burg); }
+
+        /* Expandable sections */
+        .expand-trigger { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 500; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; margin-top: 4px; }
+        .expand-trigger:hover { border-color: var(--burg-border); color: var(--ink); }
+
         /* Fields */
         .field { margin-bottom: 1.25rem; }
         .field-label { font-size: 14px; font-weight: 500; color: var(--ink-soft); margin-bottom: 7px; display: flex; align-items: center; gap: 8px; }
         .opt-tag { font-size: 11px; font-weight: 400; color: var(--faint); background: var(--surface-alt); padding: 2px 8px; border-radius: 100px; }
-        textarea { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); font-family: 'DM Sans', sans-serif; font-size: 16px; color: var(--ink); background: var(--surface); resize: vertical; min-height: 108px; line-height: 1.65; transition: border-color 0.15s, box-shadow 0.15s; }
+        textarea { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); font-family: 'DM Sans', sans-serif; font-size: 16px; color: var(--ink); background: var(--surface); resize: vertical; min-height: 100px; line-height: 1.65; transition: border-color 0.15s, box-shadow 0.15s; }
         textarea::placeholder { color: var(--faint); font-size: 15px; }
         textarea:focus { outline: none; border-color: var(--burg); box-shadow: 0 0 0 3px rgba(114,47,55,0.1); }
-        .expand-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: var(--burg); background: none; border: none; cursor: pointer; padding: 7px 0; margin-top: 4px; font-family: 'DM Sans', sans-serif; }
-        .expand-btn:hover { opacity: 0.7; }
-        .expand-chevron { font-size: 11px; display: inline-block; transition: transform 0.2s; }
-        .expand-chevron.open { transform: rotate(90deg); }
-        .expand-body { display: none; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border-soft); }
-        .expand-body.open { display: block; }
+        input[type="text"] { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); background: var(--surface); transition: border-color 0.15s; }
+        input[type="text"]:focus { outline: none; border-color: var(--burg); box-shadow: 0 0 0 3px rgba(114,47,55,0.1); }
 
         /* Checkboxes */
         .check-list { display: flex; flex-direction: column; gap: 8px; }
@@ -414,10 +450,16 @@ export default function Home() {
         .fhir-btn { padding: 10px 18px; background: var(--burg); color: white; border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
         .fhir-btn:disabled { background: var(--border); color: var(--faint); cursor: not-allowed; }
         .fhir-error   { font-size: 13px; color: #8B2020; margin-top: 8px; }
-        .fhir-success { font-size: 13px; color: var(--burg); margin-top: 8px; font-weight: 500; }
+        .fhir-success { font-size: 13px; color: #2A6B22; margin-top: 8px; font-weight: 500; }
 
-        /* Error */
+        /* Error — reserved for actual errors only */
         .error-banner { background: #FFF0F0; border: 1px solid #FFC0C0; border-radius: var(--radius-md); padding: 14px 16px; margin-top: 1rem; font-size: 14px; color: #8B2020; }
+
+        /* Q2b yes/no buttons */
+        .yn-row { display: flex; gap: 10px; }
+        .yn-btn { flex: 1; padding: 15px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 500; color: var(--ink-soft); cursor: pointer; transition: all 0.15s; text-align: center; }
+        .yn-btn:hover { border-color: var(--burg-border); background: var(--burg-light); }
+        .yn-btn.sel { border: 2px solid var(--burg); background: var(--burg-light); color: var(--burg); }
 
         /* Loading */
         .loading-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; background: var(--bg); }
@@ -442,7 +484,7 @@ export default function Home() {
         .brief-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--burg); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 20px 22px; margin-bottom: 12px; }
         .brief-card-label { font-size: 10px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
         .brief-card-body  { font-size: 16px; color: var(--ink); line-height: 1.75; }
-        .disclosure { font-size: 13px; color: var(--muted); line-height: 1.65; margin-top: 2rem; padding-top: 1.75rem; border-top: 1px solid var(--border-soft); }
+        .disclosure { font-size: 13px; font-style: italic; color: var(--faint); line-height: 1.6; margin-top: 2rem; }
 
         /* For the caregiver */
         .ftc-section { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
@@ -464,6 +506,38 @@ export default function Home() {
         .res-link { font-size: 13px; color: var(--burg); text-decoration: none; font-weight: 500; }
         .res-link:hover { text-decoration: underline; }
 
+        /* What's Next */
+        .wn-section { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+        .wn-eyebrow { font-size: 11px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+        .wn-heading { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 500; color: var(--ink); line-height: 1.3; margin-bottom: 0.6rem; }
+        .wn-context { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 1.25rem; }
+        .wn-options { display: flex; flex-direction: column; gap: 10px; }
+        .wn-option { width: 100%; text-align: left; padding: 17px 20px; background: var(--sage-light); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 500; color: var(--ink-soft); transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+        .wn-option:hover { border-color: var(--burg-border); background: var(--burg-light); color: var(--burg-deep); }
+        .wn-details { margin-top: 1.25rem; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+        .wn-det-label { font-size: 14px; font-weight: 500; color: var(--ink-soft); margin-bottom: 9px; }
+        .wn-pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .wn-pill { flex: 1; min-width: 80px; padding: 10px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; text-align: center; }
+        .wn-pill:hover { border-color: var(--burg-border); color: var(--ink); }
+        .wn-pill.sel { background: var(--burg-light); border: 2px solid var(--burg); color: var(--burg); font-weight: 500; }
+        .wn-mini-progress { height: 2px; background: var(--border-soft); border-radius: 100px; overflow: hidden; margin-bottom: 1.5rem; }
+        .wn-mini-fill { height: 100%; background: var(--sage-border); border-radius: 100px; }
+        .wn-loading { display: flex; flex-direction: column; align-items: center; padding: 2.5rem 1rem; gap: 0.75rem; }
+        .wn-loading-text { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--ink); }
+        .wn-plan-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 1.75rem; position: sticky; top: 0; background: var(--bg); padding: 1rem 0; z-index: 10; border-bottom: 1px solid var(--border-soft); }
+        .wn-plan-meta { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+        .wn-print-btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 20px; background: var(--burg); border: none; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: #FAF0F1; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, box-shadow 0.15s; box-shadow: 0 4px 14px rgba(114,47,55,0.22); }
+        .wn-print-btn:hover { background: var(--burg-deep); box-shadow: 0 6px 18px rgba(114,47,55,0.3); }
+        .wn-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--sage-border); border-radius: var(--radius-md); margin-bottom: 14px; overflow: hidden; }
+        .wn-card-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border-soft); }
+        .wn-card-week { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; color: var(--ink); display: block; line-height: 1.2; }
+        .wn-card-sub { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-top: 2px; }
+        .wn-check-row { display: flex; gap: 14px; align-items: flex-start; padding: 13px 20px; border-bottom: 1px solid var(--border-soft); }
+        .wn-check-row:last-child { border-bottom: none; }
+        .wn-checkbox { width: 17px; height: 17px; border-radius: 4px; border: 1.5px solid var(--sage-border); flex-shrink: 0; margin-top: 3px; background: white; }
+        .wn-check-text { font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
+        .wn-disclaimer { font-size: 13px; font-style: italic; color: var(--faint); line-height: 1.6; margin-top: 1.5rem; }
+
         /* Print */
         @media print {
           .hero-bg, .q-wrap .btn-primary, .q-wrap .btn-ghost, .no-print { display: none !important; }
@@ -483,36 +557,6 @@ export default function Home() {
         button:focus-visible, textarea:focus-visible, input:focus-visible {
           outline: 3px solid var(--burg); outline-offset: 2px;
         }
-
-        /* What's Next */
-        .wn-section { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border); }
-        .wn-eyebrow { font-size: 11px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
-        .wn-heading { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 500; color: var(--ink); line-height: 1.3; margin-bottom: 1.25rem; }
-        .wn-options { display: flex; flex-direction: column; gap: 8px; }
-        .wn-option { width: 100%; text-align: left; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink-soft); transition: all 0.15s; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-        .wn-option:hover { border-color: var(--burg-border); background: var(--burg-light); color: var(--burg); }
-        .wn-option.sel { border: 2px solid var(--burg); background: var(--burg-light); color: var(--burg); font-weight: 500; }
-        .wn-details { margin-top: 1.25rem; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; gap: 18px; }
-        .wn-det-label { font-size: 14px; font-weight: 500; color: var(--ink-soft); margin-bottom: 9px; }
-        .wn-pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
-        .wn-pill { flex: 1; min-width: 80px; padding: 10px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; text-align: center; }
-        .wn-pill:hover { border-color: var(--burg-border); color: var(--ink); }
-        .wn-pill.sel { background: var(--burg-light); border: 2px solid var(--burg); color: var(--burg); font-weight: 500; }
-        .wn-loading { display: flex; flex-direction: column; align-items: center; padding: 2.5rem 1rem; gap: 0.75rem; }
-        .wn-loading-text { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--ink); }
-        .wn-plan-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 1.75rem; position: sticky; top: 0; background: var(--bg); padding: 1rem 0; z-index: 10; border-bottom: 1px solid var(--border-soft); }
-        .wn-plan-meta { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
-        .wn-print-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink-soft); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s; }
-        .wn-print-btn:hover { border-color: var(--burg-border); color: var(--burg); background: var(--burg-light); }
-        .wn-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); margin-bottom: 12px; overflow: hidden; }
-        .wn-card-header { padding: 14px 18px 12px; border-bottom: 1px solid var(--border-soft); display: flex; align-items: baseline; gap: 10px; }
-        .wn-card-week { font-size: 11px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.1em; }
-        .wn-card-label { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 500; color: var(--ink-soft); }
-        .wn-check-row { display: flex; gap: 14px; align-items: flex-start; padding: 13px 18px; border-bottom: 1px solid var(--border-soft); }
-        .wn-check-row:last-child { border-bottom: none; }
-        .wn-checkbox { width: 17px; height: 17px; border-radius: 4px; border: 1.5px solid var(--burg-border); flex-shrink: 0; margin-top: 3px; background: white; }
-        .wn-check-text { font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
-        .wn-disclaimer { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-soft); }
       `}</style>
 
       {/* ═══ HERO ═══ */}
@@ -571,9 +615,9 @@ export default function Home() {
 
           <div className="what-cards f5">
             {[
-              { icon: "🌿", cls: "ic-brief", title: "A Caregiver Brief",       body: "A plain-English summary that any family member, home aide, or new provider can read and immediately understand." },
-              { icon: "🤍", cls: "ic-you",   title: "For the caregiver",       body: "A private page with a day-by-day timeline, emotional resources, and acknowledgment of what you're carrying." },
-              { icon: "📋", cls: "ic-print", title: "Something for today",     body: "Print it, share it, or just read it yourself. Organized and ready the moment you're done." },
+              { icon: "🌿", cls: "ic-brief", title: "A Caregiver Brief",   body: "A plain-English summary that any family member, home aide, or new provider can read and immediately understand." },
+              { icon: "🤍", cls: "ic-you",   title: "For the caregiver",   body: "A private page with a day-by-day timeline, emotional resources, and acknowledgment of what you're carrying." },
+              { icon: "📋", cls: "ic-print", title: "Something for today", body: "Print it, share it, or just read it yourself. Organized and ready the moment you're done." },
             ].map(c => (
               <div className="what-card" key={c.title}>
                 <div className={`wc-icon ${c.cls}`}>{c.icon}</div>
@@ -588,7 +632,7 @@ export default function Home() {
             </div>
           </div>
           <p style={{fontSize:13,color:"var(--muted)",marginTop:"2rem",textAlign:"center" as const}}>
-            <a href="/privacy" style={{color:"var(--muted)",textDecoration:"underline"}}>Privacy, HIPAA & compliance information</a>
+            <a href="/privacy" style={{color:"var(--muted)",textDecoration:"underline"}}>Privacy, HIPAA &amp; compliance information</a>
           </p>
           <p style={{fontSize:13,color:"var(--muted)",marginTop:"0.5rem",textAlign:"center" as const}}>
             <a href="/whats-next" style={{color:"var(--burg)",textDecoration:"none",fontWeight:500}}>Try the 30-day action plan generator →</a>
@@ -602,7 +646,7 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("hero")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"18%"}} /></div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"14%"}} /></div>
           <div className="progress-label">Getting started</div>
           <h2 className="big-q">Where are you right now?</h2>
           <p className="q-sub">This shapes your brief and the questions we ask. There are no wrong answers.</p>
@@ -620,51 +664,62 @@ export default function Home() {
         </div>
       )}
 
-      {/* ═══ Q1 ═══ */}
+      {/* ═══ Q1 — Situation ═══ */}
       {step === "q1" && (
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("stage")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"44%"}} /></div>
-          <div className="progress-label">Step 1 of 3: The situation</div>
-          <h2 className="big-q">What&apos;s the main reason your loved one needs support right now?</h2>
-          <div className="banner">
-            <span style={{fontSize:16,flexShrink:0,marginTop:1}}>💡</span>
-            <span className="banner-text">The more you share, the more useful your brief will be. Anything is a good start. Skip anything you&apos;re not ready for.</span>
+          <div className="progress-track"><div className="progress-fill" style={{width:"33%"}} /></div>
+          <div className="progress-label">Step 1 of 4: The situation</div>
+          <h2 className="big-q">What best describes the situation?</h2>
+          <p className="q-sub">Pick the one that fits closest. You can add details on the next screen.</p>
+          <div className="sit-grid">
+            {SITUATION_OPTIONS.map(opt => (
+              <button key={opt} className={`sit-btn${situationChoice === opt ? " sel" : ""}`} onClick={() => setSituationChoice(opt)}>
+                {opt}
+                {situationChoice === opt
+                  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#722F37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
+                  : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{opacity:0.3}}><circle cx="12" cy="12" r="10"/></svg>
+                }
+              </button>
+            ))}
           </div>
-          <div className="field">
-            <label className="field-label" htmlFor="situation">The situation</label>
-            <textarea id="situation" value={situation} onChange={e => setSituation(e.target.value)} placeholder="e.g. recovering from a stroke, managing late-stage Parkinson's, adjusting after a recent fall..." rows={3} />
-            <p style={{fontSize:13,color:"var(--faint)",marginTop:7}}>No names of people, providers, or facilities needed.</p>
-          </div>
-          <div className="field">
-            <label className="field-label" htmlFor="situationMore">More detail <span className="opt-tag">Optional</span></label>
-            <textarea id="situationMore" value={situationMore} onChange={e => setSituationMore(e.target.value)} placeholder="How long has this been going on? What recently changed? What should a new helper know right away?" rows={3} />
-          </div>
-          <button className="btn-primary" onClick={() => goTo("q2")}>Continue →</button>
-          <button className="btn-ghost" onClick={() => goTo("q2")}>Skip for now</button>
+          {situationChoice === "Something else" && (
+            <div className="field" style={{marginTop:"1rem"}}>
+              <label className="field-label" htmlFor="situationOther">Describe the situation briefly</label>
+              <textarea
+                id="situationOther"
+                value={situationOther}
+                onChange={e => setSituationOther(e.target.value)}
+                placeholder="What's going on? No names or details needed."
+                rows={3}
+              />
+            </div>
+          )}
+          <button
+            className="btn-primary"
+            disabled={!situationChoice || (situationChoice === "Something else" && !situationOther.trim())}
+            onClick={() => goTo("q2")}
+          >
+            Continue →
+          </button>
         </div>
       )}
 
-      {/* ═══ Q2 ═══ */}
+      {/* ═══ Q2 — Medical ═══ */}
       {step === "q2" && (
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("q1")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"68%"}} /></div>
-          <div className="progress-label">Step 2 of 3: Medical overview</div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"52%"}} /></div>
+          <div className="progress-label">Step 2 of 4: Medical overview</div>
           <h2 className="big-q">What conditions or diagnoses have they been given?</h2>
-          <p className="q-sub">Condition names only. No record numbers, insurance IDs, or personal identifiers needed.</p>
+          <p className="q-sub">Condition names only. No record numbers or personal identifiers needed.</p>
+
           <div className="fhir-prefill-card">
             <div className="fhir-prefill-label">Optional: pre-fill from a patient ID</div>
             <div className="fhir-prefill-row">
-              <input
-                type="text"
-                className="fhir-input"
-                placeholder="Patient ID"
-                value={fhirId}
-                onChange={e => setFhirId(e.target.value)}
-              />
+              <input type="text" className="fhir-input" placeholder="Patient ID" value={fhirId} onChange={e => setFhirId(e.target.value)} />
               <button className="fhir-btn" onClick={loadFhir} disabled={fhirLoading}>
                 {fhirLoading ? "Loading..." : "Pre-fill"}
               </button>
@@ -672,38 +727,118 @@ export default function Home() {
             {fhirError && <p className="fhir-error">{fhirError}</p>}
             {fhirLoaded && <p className="fhir-success">Fields pre-filled. Review and edit below.</p>}
           </div>
+
           <div className="field">
             <label className="field-label" htmlFor="medical">Conditions</label>
-            <textarea id="medical" value={medical} onChange={e => setMedical(e.target.value)} placeholder="e.g. diabetes, congestive heart failure, dementia, Parkinson's..." rows={3} />
+            <textarea
+              id="medical"
+              value={medical}
+              onChange={e => setMedical(e.target.value)}
+              placeholder="e.g. diabetes, congestive heart failure, dementia, Parkinson's..."
+              rows={3}
+            />
+            <div className="chip-row">
+              {CONDITION_CHIPS.map(chip => (
+                <button key={chip} className="chip" onClick={() => addConditionChip(chip)}>{chip}</button>
+              ))}
+            </div>
           </div>
+
           <div className="field">
-            <label className="field-label" htmlFor="medications">Medications <span className="opt-tag">Optional</span></label>
-            <textarea id="medications" value={medications} onChange={e => setMedications(e.target.value)} placeholder="Drug name and how often, e.g. Lisinopril once daily, Metformin twice with meals..." rows={3} />
+            {!medsOpen
+              ? <button className="expand-trigger" onClick={() => setMedsOpen(true)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Add medications <span className="opt-tag">Optional</span>
+                </button>
+              : <>
+                  <label className="field-label" htmlFor="medications">Medications</label>
+                  <textarea
+                    id="medications"
+                    value={medications}
+                    onChange={e => setMedications(e.target.value)}
+                    placeholder="Drug name and how often, e.g. Lisinopril once daily, Metformin twice with meals..."
+                    rows={3}
+                  />
+                </>
+            }
           </div>
+
           <div className="field">
-            <label className="field-label" htmlFor="allergies">Known allergies <span className="opt-tag">Optional</span></label>
-            <textarea id="allergies" value={allergies} onChange={e => setAllergies(e.target.value)} placeholder="Substance names only..." rows={2} />
+            {!allergiesOpen
+              ? <button className="expand-trigger" onClick={() => setAllergiesOpen(true)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Add known allergies <span className="opt-tag">Optional</span>
+                </button>
+              : <>
+                  <label className="field-label" htmlFor="allergies">Known allergies</label>
+                  <textarea
+                    id="allergies"
+                    value={allergies}
+                    onChange={e => setAllergies(e.target.value)}
+                    placeholder="Substance names only..."
+                    rows={2}
+                  />
+                </>
+            }
           </div>
-          <div className="field">
-            <label className="field-label" htmlFor="recentChanges">Anything changed recently? <span className="opt-tag">Optional</span></label>
-            <textarea id="recentChanges" value={recentChanges} onChange={e => setRecentChanges(e.target.value)} placeholder="New diagnosis, recent hospitalization, change in care plan..." rows={2} />
-          </div>
-          <button className="btn-primary" onClick={() => goTo("q3")}>Continue →</button>
-          <button className="btn-ghost" onClick={() => goTo("q3")}>Skip for now</button>
+
+          <button className="btn-primary" onClick={() => goTo("q2b")}>Continue →</button>
+          <button className="btn-ghost" onClick={() => goTo("q2b")}>Skip for now</button>
         </div>
       )}
 
-      {/* ═══ Q3 ═══ */}
-      {step === "q3" && (
+      {/* ═══ Q2b — Recent changes ═══ */}
+      {step === "q2b" && (
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("q2")}>← Back</button>
           <QWordmark />
+          <div className="progress-track"><div className="progress-fill" style={{width:"71%"}} /></div>
+          <div className="progress-label">Step 3 of 4: Recent changes</div>
+          <h2 className="big-q">Has anything changed recently?</h2>
+          <p className="q-sub">A new diagnosis, hospitalization, or shift in care can change everything. This helps us reflect that in your brief.</p>
+          <div className="yn-row">
+            <button
+              className={`yn-btn${hadRecentChanges === true ? " sel" : ""}`}
+              onClick={() => setHadRecentChanges(true)}
+            >
+              Yes
+            </button>
+            <button
+              className={`yn-btn${hadRecentChanges === false ? " sel" : ""}`}
+              onClick={() => { setHadRecentChanges(false); goTo("q3"); }}
+            >
+              No
+            </button>
+          </div>
+          {hadRecentChanges === true && (
+            <>
+              <div className="field" style={{marginTop:"1.25rem"}}>
+                <label className="field-label" htmlFor="recentChanges">What changed?</label>
+                <textarea
+                  id="recentChanges"
+                  value={recentChanges}
+                  onChange={e => setRecentChanges(e.target.value)}
+                  placeholder="New diagnosis, recent hospitalization, change in care plan, new provider..."
+                  rows={3}
+                />
+              </div>
+              <button className="btn-primary" onClick={() => goTo("q3")}>Continue →</button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ═══ Q3 — Wellbeing ═══ */}
+      {step === "q3" && (
+        <div className="q-wrap">
+          <button className="btn-back" onClick={() => goTo("q2b")}>← Back</button>
+          <QWordmark />
           <div className="progress-track"><div className="progress-fill" style={{width:"90%"}} /></div>
-          <div className="progress-label">Step 3 of 3: Just for you</div>
+          <div className="progress-label">Step 4 of 4: Just for you</div>
           <h2 className="big-q">How are you doing in all of this?</h2>
           <div className="banner warm">
             <span style={{fontSize:16,flexShrink:0,marginTop:1}}>🌿</span>
-            <span className="banner-text">This section is just for you. Your answers won&apos;t appear in the brief you share. They go on a private page that&apos;s only yours.</span>
+            <span className="banner-text">This part is just for you. Nothing you share here shows up in the brief.</span>
           </div>
           {error && <div className="error-banner">{error}</div>}
           <div className="check-list">
@@ -761,12 +896,10 @@ export default function Home() {
           {brief.comfortGoals && <BriefCard label="Comfort and care goals" body={brief.comfortGoals} />}
           {brief.importantNotes && <BriefCard label="Recent changes and notes" body={brief.importantNotes} />}
 
-          {/* For the caregiver */}
           {stage && (
             <div className="ftc-section">
               <div className="ftc-eyebrow">For the caregiver</div>
               {brief.forYou && <p className="ftc-ack">{brief.forYou}</p>}
-
               <div style={{marginBottom:"1.5rem"}}>
                 {TIMELINE[stage].map(block => (
                   <div className="timeline-period" key={block.period}>
@@ -782,7 +915,6 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-
               <div className="resources-section">
                 <div className="res-title">Where to find support</div>
                 {RESOURCES.map(r => (
@@ -799,17 +931,19 @@ export default function Home() {
             </div>
           )}
 
-          <div className="disclosure">
+          <p className="disclosure">
             Generated with AI assistance on {dateStr}. For organizational purposes only. Not a medical record. Not a substitute for professional medical or legal advice.
-          </div>
+          </p>
 
-          {/* What's Next section */}
+          {/* What's Next */}
           <div className="wn-section">
+
             {/* Step 1: Choose concern */}
             {!wnConcern && !wnLoading && (
               <div className="no-print">
                 <div className="wn-eyebrow">What&apos;s Next?</div>
-                <h3 className="wn-heading">What&apos;s your most pressing concern right now?</h3>
+                <h3 className="wn-heading">One more step: what do you need most right now?</h3>
+                <p className="wn-context">We&apos;ll use your care stage to build a 30-day action plan around your answer.</p>
                 <div className="wn-options">
                   {WN_CONCERNS.map(c => (
                     <button key={c} className="wn-option" onClick={() => selectConcern(c)}>
@@ -821,11 +955,12 @@ export default function Home() {
               </div>
             )}
 
-            {/* Step 2: Details before generating */}
+            {/* Step 2: Quick details */}
             {wnConcern && !wnPlan && !wnLoading && (
               <div className="no-print">
-                <div className="wn-eyebrow">What&apos;s Next?</div>
-                <h3 className="wn-heading" style={{marginBottom:"0.5rem"}}>{wnConcern}</h3>
+                <div className="wn-mini-progress"><div className="wn-mini-fill" style={{width:"60%"}} /></div>
+                <div className="wn-eyebrow">What&apos;s Next? · Step 2 of 2</div>
+                <h3 className="wn-heading" style={{marginBottom:"0.4rem"}}>{wnConcern}</h3>
                 <button onClick={() => selectConcern("")} style={{background:"none",border:"none",fontFamily:"inherit",fontSize:13,color:"var(--muted)",cursor:"pointer",padding:"0 0 1.25rem",display:"block"}}>← Change concern</button>
                 {wnError && <div className="error-banner" style={{marginBottom:"1rem"}}>{wnError}</div>}
                 <div className="wn-details">
@@ -864,7 +999,6 @@ export default function Home() {
             {/* Plan output */}
             {wnPlan && !wnLoading && (
               <>
-                {/* Sticky header with print button */}
                 <div className="wn-plan-header">
                   <div>
                     <div className="wn-eyebrow">Your Care Plan</div>
@@ -879,7 +1013,7 @@ export default function Home() {
                 <div className="wn-card">
                   <div className="wn-card-header">
                     <span className="wn-card-week">Week 1</span>
-                    <span className="wn-card-label">Right Now</span>
+                    <span className="wn-card-sub">Right Now</span>
                   </div>
                   {wnPlan.week1.map((item, i) => (
                     <div className="wn-check-row" key={i}>
@@ -892,7 +1026,7 @@ export default function Home() {
                 <div className="wn-card">
                   <div className="wn-card-header">
                     <span className="wn-card-week">Weeks 2–3</span>
-                    <span className="wn-card-label">This Month</span>
+                    <span className="wn-card-sub">This Month</span>
                   </div>
                   {wnPlan.weeks23.map((item, i) => (
                     <div className="wn-check-row" key={i}>
@@ -905,7 +1039,7 @@ export default function Home() {
                 <div className="wn-card">
                   <div className="wn-card-header">
                     <span className="wn-card-week">Week 4</span>
-                    <span className="wn-card-label">Looking Ahead</span>
+                    <span className="wn-card-sub">Looking Ahead</span>
                   </div>
                   {wnPlan.week4.map((item, i) => (
                     <div className="wn-check-row" key={i}>
@@ -915,17 +1049,16 @@ export default function Home() {
                   ))}
                 </div>
 
-                <div className="wn-disclaimer">
+                <p className="wn-disclaimer">
                   This plan is a starting point. Always consult your care team for medical decisions.
-                </div>
+                </p>
               </>
             )}
           </div>
 
-          <div className="no-print" style={{marginTop:"2rem",display:"flex",flexDirection:"column" as const,gap:10}}>
-            <p style={{fontSize:13,color:"var(--muted)",marginBottom:8}}>Review everything before sharing. AI can make mistakes.</p>
-            <button className="btn-primary" onClick={() => window.print()}>Print or save as PDF</button>
-            <button className="btn-ghost" onClick={reset}>Start over</button>
+          <div className="no-print" style={{marginTop:"2.5rem",display:"flex",flexDirection:"column" as const,gap:8}}>
+            <p style={{fontSize:13,color:"var(--muted)",marginBottom:4}}>Review everything before sharing. AI can make mistakes.</p>
+            <button className="btn-ghost" style={{fontSize:14,padding:"11px"}} onClick={reset}>Start over</button>
           </div>
         </div>
       )}
