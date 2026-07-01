@@ -103,13 +103,11 @@ export default function Home() {
   const [fhirError, setFhirError]         = useState<string | null>(null);
   const [fhirLoaded, setFhirLoaded]       = useState(false);
   const [wnConcern, setWnConcern]         = useState<string | null>(null);
+  const [wnHours, setWnHours]             = useState("");
+  const [wnIsPrimary, setWnIsPrimary]     = useState<boolean | null>(null);
   const [wnPlan, setWnPlan]               = useState<WnPlan | null>(null);
   const [wnLoading, setWnLoading]         = useState(false);
   const [wnError, setWnError]             = useState<string | null>(null);
-  const [refineOpen, setRefineOpen]       = useState(false);
-  const [refineHours, setRefineHours]     = useState("");
-  const [refinePrimary, setRefinePrimary] = useState<boolean | null>(null);
-  const [wnRefining, setWnRefining]       = useState(false);
 
   function goTo(s: Step) {
     setStep(s);
@@ -173,59 +171,35 @@ export default function Home() {
     setMedical(""); setMedications(""); setAllergies(""); setRecentChanges("");
     setWellbeing([]); setBrief(null); setError(null);
     setFhirId(""); setFhirLoading(false); setFhirError(null); setFhirLoaded(false);
-    setWnConcern(null); setWnPlan(null); setWnLoading(false); setWnError(null);
-    setRefineOpen(false); setRefineHours(""); setRefinePrimary(null); setWnRefining(false);
+    setWnConcern(null); setWnHours(""); setWnIsPrimary(null);
+    setWnPlan(null); setWnLoading(false); setWnError(null);
   }
 
-  async function selectConcern(concern: string) {
+  function selectConcern(concern: string) {
     setWnConcern(concern);
+    setWnHours("");
+    setWnIsPrimary(null);
+    setWnError(null);
+  }
+
+  async function buildPlan() {
+    if (!wnConcern || !wnHours || wnIsPrimary === null) return;
     setWnLoading(true);
     setWnError(null);
     try {
       const res = await fetch("/api/whats-next", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ careStage: stage, concern }),
+        body: JSON.stringify({ careStage: stage, concern: wnConcern, hoursPerWeek: wnHours, isPrimary: wnIsPrimary }),
       });
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
       setWnPlan(data);
     } catch {
       setWnError("Something went wrong. Please try again.");
-      setWnConcern(null);
     } finally {
       setWnLoading(false);
     }
-  }
-
-  async function refinePlan() {
-    if (!wnConcern) return;
-    setWnRefining(true);
-    try {
-      const res = await fetch("/api/whats-next", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          careStage: stage,
-          concern: wnConcern,
-          hoursPerWeek: refineHours || undefined,
-          isPrimary: refinePrimary !== null ? refinePrimary : undefined,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      setWnPlan(data);
-      setRefineOpen(false);
-    } catch {
-      setWnError("Could not refine the plan. Please try again.");
-    } finally {
-      setWnRefining(false);
-    }
-  }
-
-  function resetWn() {
-    setWnConcern(null); setWnPlan(null); setWnLoading(false); setWnError(null);
-    setRefineOpen(false); setRefineHours(""); setRefinePrimary(null); setWnRefining(false);
   }
 
   const dateStr = new Date().toLocaleDateString("en-US", {
@@ -495,6 +469,8 @@ export default function Home() {
           .hero-bg, .q-wrap .btn-primary, .q-wrap .btn-ghost, .no-print { display: none !important; }
           .brief-wrap { padding: 1rem; max-width: 100%; }
           .ftc-section { page-break-before: always; }
+          .wn-section { page-break-before: always; }
+          .wn-plan-header { position: static; border-bottom: none; padding: 0 0 1rem; }
         }
 
         /* Responsive */
@@ -515,26 +491,27 @@ export default function Home() {
         .wn-options { display: flex; flex-direction: column; gap: 8px; }
         .wn-option { width: 100%; text-align: left; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink-soft); transition: all 0.15s; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
         .wn-option:hover { border-color: var(--burg-border); background: var(--burg-light); color: var(--burg); }
+        .wn-option.sel { border: 2px solid var(--burg); background: var(--burg-light); color: var(--burg); font-weight: 500; }
+        .wn-details { margin-top: 1.25rem; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+        .wn-det-label { font-size: 14px; font-weight: 500; color: var(--ink-soft); margin-bottom: 9px; }
+        .wn-pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .wn-pill { flex: 1; min-width: 80px; padding: 10px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; text-align: center; }
+        .wn-pill:hover { border-color: var(--burg-border); color: var(--ink); }
+        .wn-pill.sel { background: var(--burg-light); border: 2px solid var(--burg); color: var(--burg); font-weight: 500; }
         .wn-loading { display: flex; flex-direction: column; align-items: center; padding: 2.5rem 1rem; gap: 0.75rem; }
         .wn-loading-text { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--ink); }
-        .wn-plan-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; color: var(--ink); margin-bottom: 0.5rem; margin-top: 0.25rem; }
-        .wn-plan-sub { font-size: 14px; color: var(--muted); margin-bottom: 2rem; line-height: 1.65; }
-        .plan-section { margin-bottom: 1.75rem; }
-        .plan-period { font-size: 11px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 10px; }
-        .plan-period::after { content: ''; flex: 1; height: 1px; background: var(--burg-border); }
-        .plan-items { display: flex; flex-direction: column; gap: 8px; }
-        .plan-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); }
-        .plan-item-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--burg); flex-shrink: 0; margin-top: 7px; }
-        .plan-item-text { font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
-        .refine-card { margin-top: 1.5rem; border: 1px solid var(--border-soft); border-radius: var(--radius-md); overflow: hidden; }
-        .refine-toggle { width: 100%; text-align: left; padding: 14px 18px; background: var(--surface-alt); border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-        .refine-toggle:hover { background: var(--border-soft); }
-        .refine-body { padding: 18px; background: var(--surface); border-top: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 16px; }
-        .refine-field-label { font-size: 13px; font-weight: 500; color: var(--ink-soft); margin-bottom: 8px; }
-        .refine-row { display: flex; gap: 8px; }
-        .refine-pill { flex: 1; padding: 10px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; text-align: center; }
-        .refine-pill:hover { border-color: var(--burg-border); color: var(--ink); }
-        .refine-pill.sel { background: var(--burg-light); border: 2px solid var(--burg); color: var(--burg); font-weight: 500; }
+        .wn-plan-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 1.75rem; position: sticky; top: 0; background: var(--bg); padding: 1rem 0; z-index: 10; border-bottom: 1px solid var(--border-soft); }
+        .wn-plan-meta { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+        .wn-print-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink-soft); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s; }
+        .wn-print-btn:hover { border-color: var(--burg-border); color: var(--burg); background: var(--burg-light); }
+        .wn-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); margin-bottom: 12px; overflow: hidden; }
+        .wn-card-header { padding: 14px 18px 12px; border-bottom: 1px solid var(--border-soft); display: flex; align-items: baseline; gap: 10px; }
+        .wn-card-week { font-size: 11px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.1em; }
+        .wn-card-label { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 500; color: var(--ink-soft); }
+        .wn-check-row { display: flex; gap: 14px; align-items: flex-start; padding: 13px 18px; border-bottom: 1px solid var(--border-soft); }
+        .wn-check-row:last-child { border-bottom: none; }
+        .wn-checkbox { width: 17px; height: 17px; border-radius: 4px; border: 1.5px solid var(--burg-border); flex-shrink: 0; margin-top: 3px; background: white; }
+        .wn-check-text { font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
         .wn-disclaimer { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-soft); }
       `}</style>
 
@@ -828,15 +805,15 @@ export default function Home() {
 
           {/* What's Next section */}
           <div className="wn-section">
-            {!wnPlan && !wnLoading && (
+            {/* Step 1: Choose concern */}
+            {!wnConcern && !wnLoading && (
               <div className="no-print">
                 <div className="wn-eyebrow">What&apos;s Next?</div>
                 <h3 className="wn-heading">What&apos;s your most pressing concern right now?</h3>
-                {wnError && <div className="error-banner" style={{marginBottom:"1rem"}}>{wnError}</div>}
                 <div className="wn-options">
-                  {WN_CONCERNS.map(concern => (
-                    <button key={concern} className="wn-option" onClick={() => selectConcern(concern)}>
-                      {concern}
+                  {WN_CONCERNS.map(c => (
+                    <button key={c} className="wn-option" onClick={() => selectConcern(c)}>
+                      {c}
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </button>
                   ))}
@@ -844,6 +821,37 @@ export default function Home() {
               </div>
             )}
 
+            {/* Step 2: Details before generating */}
+            {wnConcern && !wnPlan && !wnLoading && (
+              <div className="no-print">
+                <div className="wn-eyebrow">What&apos;s Next?</div>
+                <h3 className="wn-heading" style={{marginBottom:"0.5rem"}}>{wnConcern}</h3>
+                <button onClick={() => selectConcern("")} style={{background:"none",border:"none",fontFamily:"inherit",fontSize:13,color:"var(--muted)",cursor:"pointer",padding:"0 0 1.25rem",display:"block"}}>← Change concern</button>
+                {wnError && <div className="error-banner" style={{marginBottom:"1rem"}}>{wnError}</div>}
+                <div className="wn-details">
+                  <div>
+                    <div className="wn-det-label">How many hours per week do you have available?</div>
+                    <div className="wn-pill-row">
+                      {[["Less than 5 hours","< 5 hrs"],["5 to 10 hours","5–10 hrs"],["10 or more hours","10+ hrs"]].map(([val, label]) => (
+                        <button key={val} className={`wn-pill${wnHours === val ? " sel" : ""}`} onClick={() => setWnHours(val)}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="wn-det-label">Are you the primary caregiver?</div>
+                    <div className="wn-pill-row" style={{maxWidth:200}}>
+                      <button className={`wn-pill${wnIsPrimary === true ? " sel" : ""}`} onClick={() => setWnIsPrimary(wnIsPrimary === true ? null : true)}>Yes</button>
+                      <button className={`wn-pill${wnIsPrimary === false ? " sel" : ""}`} onClick={() => setWnIsPrimary(wnIsPrimary === false ? null : false)}>No</button>
+                    </div>
+                  </div>
+                </div>
+                <button className="btn-primary" style={{marginTop:"1.25rem"}} disabled={!wnHours || wnIsPrimary === null} onClick={buildPlan}>
+                  Build my plan →
+                </button>
+              </div>
+            )}
+
+            {/* Loading */}
             {wnLoading && (
               <div className="wn-loading no-print" role="status" aria-live="polite">
                 <div className="loading-dots" aria-hidden="true">
@@ -853,84 +861,62 @@ export default function Home() {
               </div>
             )}
 
+            {/* Plan output */}
             {wnPlan && !wnLoading && (
               <>
-                <div className="no-print"><div className="wn-eyebrow">What&apos;s Next?</div></div>
-                <h3 className="wn-plan-title">Your 30-day plan</h3>
-                <p className="wn-plan-sub">Built around your care stage and concern. Start with Week 1.</p>
-
-                <div className="plan-section">
-                  <div className="plan-period">Week 1 — Immediate priorities</div>
-                  <div className="plan-items">
-                    {wnPlan.week1.map((item, i) => (
-                      <div className="plan-item" key={i}>
-                        <div className="plan-item-dot" />
-                        <div className="plan-item-text">{item}</div>
-                      </div>
-                    ))}
+                {/* Sticky header with print button */}
+                <div className="wn-plan-header">
+                  <div>
+                    <div className="wn-eyebrow">Your Care Plan</div>
+                    <div className="wn-plan-meta">{stage} &middot; {wnConcern}</div>
                   </div>
-                </div>
-
-                <div className="plan-section">
-                  <div className="plan-period">Weeks 2 and 3 — Short-term actions</div>
-                  <div className="plan-items">
-                    {wnPlan.weeks23.map((item, i) => (
-                      <div className="plan-item" key={i}>
-                        <div className="plan-item-dot" />
-                        <div className="plan-item-text">{item}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="plan-section">
-                  <div className="plan-period">Week 4 — Looking ahead</div>
-                  <div className="plan-items">
-                    {wnPlan.week4.map((item, i) => (
-                      <div className="plan-item" key={i}>
-                        <div className="plan-item-dot" />
-                        <div className="plan-item-text">{item}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="refine-card no-print">
-                  <button className="refine-toggle" onClick={() => setRefineOpen(o => !o)} aria-expanded={refineOpen}>
-                    Refine your plan
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,transform:refineOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}><path d="M6 9l6 6 6-6"/></svg>
+                  <button className="wn-print-btn no-print" onClick={() => window.print()}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    Print this plan
                   </button>
-                  {refineOpen && (
-                    <div className="refine-body">
-                      <div>
-                        <div className="refine-field-label">How many hours per week do you have available?</div>
-                        <div className="refine-row">
-                          {[["Less than 5 hours","<5 hrs"],["5 to 10 hours","5–10 hrs"],["10 or more hours","10+ hrs"]].map(([val, label]) => (
-                            <button key={val} className={`refine-pill${refineHours === val ? " sel" : ""}`} onClick={() => setRefineHours(refineHours === val ? "" : val)}>{label}</button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="refine-field-label">Are you the primary caregiver?</div>
-                        <div className="refine-row" style={{maxWidth:200}}>
-                          <button className={`refine-pill${refinePrimary === true ? " sel" : ""}`} onClick={() => setRefinePrimary(refinePrimary === true ? null : true)}>Yes</button>
-                          <button className={`refine-pill${refinePrimary === false ? " sel" : ""}`} onClick={() => setRefinePrimary(refinePrimary === false ? null : false)}>No</button>
-                        </div>
-                      </div>
-                      {wnError && <div className="error-banner">{wnError}</div>}
-                      <button className="btn-primary" style={{marginTop:0}} onClick={refinePlan} disabled={wnRefining || (!refineHours && refinePrimary === null)}>
-                        {wnRefining ? "Refining..." : "Update my plan →"}
-                      </button>
+                </div>
+
+                <div className="wn-card">
+                  <div className="wn-card-header">
+                    <span className="wn-card-week">Week 1</span>
+                    <span className="wn-card-label">Right Now</span>
+                  </div>
+                  {wnPlan.week1.map((item, i) => (
+                    <div className="wn-check-row" key={i}>
+                      <div className="wn-checkbox" aria-hidden="true" />
+                      <div className="wn-check-text">{item}</div>
                     </div>
-                  )}
+                  ))}
+                </div>
+
+                <div className="wn-card">
+                  <div className="wn-card-header">
+                    <span className="wn-card-week">Weeks 2–3</span>
+                    <span className="wn-card-label">This Month</span>
+                  </div>
+                  {wnPlan.weeks23.map((item, i) => (
+                    <div className="wn-check-row" key={i}>
+                      <div className="wn-checkbox" aria-hidden="true" />
+                      <div className="wn-check-text">{item}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="wn-card">
+                  <div className="wn-card-header">
+                    <span className="wn-card-week">Week 4</span>
+                    <span className="wn-card-label">Looking Ahead</span>
+                  </div>
+                  {wnPlan.week4.map((item, i) => (
+                    <div className="wn-check-row" key={i}>
+                      <div className="wn-checkbox" aria-hidden="true" />
+                      <div className="wn-check-text">{item}</div>
+                    </div>
+                  ))}
                 </div>
 
                 <div className="wn-disclaimer">
                   This plan is a starting point. Always consult your care team for medical decisions.
-                </div>
-
-                <div className="no-print" style={{marginTop:"1.25rem"}}>
-                  <button className="btn-ghost" style={{marginTop:0}} onClick={resetWn}>Try a different concern</button>
                 </div>
               </>
             )}
