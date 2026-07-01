@@ -4,7 +4,7 @@ import { useState } from "react";
 import { fetchPatientMedications, fetchPatientConditions } from "@/lib/fhir";
 
 type Stage = "Active care" | "Palliative care" | "Hospice care" | "Bereavement";
-type Step = "hero" | "stage" | "q1" | "q2" | "q2b" | "q3" | "loading" | "brief";
+type Step = "hero" | "stage" | "q1" | "q2" | "q2b" | "q3" | "q4" | "loading" | "brief";
 
 interface Brief {
   atAGlance: string;
@@ -33,15 +33,24 @@ const STAGES: { id: Stage; desc: string }[] = [
 ];
 
 const SITUATION_OPTIONS = [
-  "Recent diagnosis",
-  "Recovering from surgery or hospitalization",
-  "Managing a chronic or progressive condition",
-  "Condition has recently gotten worse",
-  "End of life planning has begun",
+  "Recently diagnosed with a serious condition",
+  "Recovering from surgery or a hospital stay",
+  "Managing a chronic or worsening condition",
+  "Preparing for end of life",
+  "We recently lost them and I'm navigating what comes next",
   "Something else",
 ];
 
-const CONDITION_CHIPS = ["Diabetes", "Dementia", "Heart failure", "Parkinson's", "Cancer", "COPD", "Stroke"];
+const CONDITION_CHIPS = [
+  "Cancer",
+  "Dementia / Alzheimer's",
+  "Heart failure",
+  "Parkinson's",
+  "Stroke recovery",
+  "COPD",
+  "Diabetes complications",
+  "Other",
+];
 
 const WELLBEING_OPTIONS = [
   { value: "exhausted", label: "I'm exhausted but keeping it together" },
@@ -54,30 +63,166 @@ const WELLBEING_OPTIONS = [
   { value: "ok",        label: "I'm managing okay most of the time" },
 ];
 
-const TIMELINE: Record<Stage, { period: string; items: string[] }[]> = {
+const WN_CONCERNS = [
+  "Medical decisions and next steps",
+  "Insurance and financial concerns",
+  "Daily caregiving logistics",
+  "Emotional support",
+  "Coordinating with family",
+];
+
+const TIMELINE: Record<Stage, { period: string; intro: string; items: string[] }[]> = {
   "Active care": [
-    { period: "Today", items: ["Write down your loved one's current medications and conditions", "Identify one family member or friend who can share the load", "Locate their insurance card and primary doctor's number"] },
-    { period: "Days 1–3", items: ["Schedule a conversation with their primary care provider", "Set up a simple medication tracking system", "Tell your employer you may need flexibility. You don't have to share details."] },
-    { period: "Days 4–7", items: ["Research whether a home health aide is needed", "Ask their doctor about what to expect in coming weeks", "Find one hour this week that is just for you"] },
-    { period: "Week 2+", items: ["Connect with a caregiver support group. Online counts.", "Review insurance coverage for home care or specialist visits", "Revisit this brief and update anything that has changed"] },
+    {
+      period: "Today",
+      intro: "These are the only things worth thinking about right now.",
+      items: [
+        "Write down your loved one's current medications and conditions",
+        "Identify one family member or friend who can share the load",
+        "Locate their insurance card and primary doctor's number",
+      ],
+    },
+    {
+      period: "Days 1–3",
+      intro: "Small steps that create a foundation for the weeks ahead.",
+      items: [
+        "Schedule a conversation with their primary care provider",
+        "Set up a simple medication tracking system",
+        "Tell your employer you may need flexibility. You don't have to share details.",
+      ],
+    },
+    {
+      period: "Days 4–7",
+      intro: "Building more consistency and getting more support in place.",
+      items: [
+        "Research whether a home health aide is needed",
+        "Ask their doctor about what to expect in coming weeks",
+        "Find one hour this week that is just for you",
+      ],
+    },
+    {
+      period: "Week 2+",
+      intro: "Stepping back to review and put longer-term support in place.",
+      items: [
+        "Connect with a caregiver support group. Online counts.",
+        "Review insurance coverage for home care or specialist visits",
+        "Revisit this brief and update anything that has changed",
+      ],
+    },
   ],
   "Palliative care": [
-    { period: "Today", items: ["Ask the palliative care team what comfort means for your loved one right now", "Write down what a good day looks like for them", "Tell someone close to you what you are going through"] },
-    { period: "Days 1–3", items: ["Ask about a hospice or palliative social worker. Their job is to help families like yours.", "Clarify what medications are for comfort vs. treatment", "Give yourself permission to not have all the answers"] },
-    { period: "Days 4–7", items: ["Have one honest conversation with your loved one about what they want, if they are able", "Identify who in the family needs to be kept informed and how", "Find a grief counselor or therapist. Anticipatory grief is real and you deserve support."] },
-    { period: "Week 2+", items: ["Ask about advance directives if not already in place. caringinfo.org has free resources.", "Plan for respite. Even a few hours matters.", "Connect with others who have been through this"] },
+    {
+      period: "Today",
+      intro: "These are the only things worth thinking about right now.",
+      items: [
+        "Ask the palliative care team what comfort means for your loved one right now",
+        "Write down what a good day looks like for them",
+        "Tell someone close to you what you are going through",
+      ],
+    },
+    {
+      period: "Days 1–3",
+      intro: "Small steps to get more support in place.",
+      items: [
+        "Ask about a hospice or palliative social worker. Their job is to help families like yours.",
+        "Clarify what medications are for comfort vs. treatment",
+        "Give yourself permission to not have all the answers",
+      ],
+    },
+    {
+      period: "Days 4–7",
+      intro: "Building more clarity around comfort and communication.",
+      items: [
+        "Have one honest conversation with your loved one about what they want, if they are able",
+        "Identify who in the family needs to be kept informed and how",
+        "Find a grief counselor or therapist. Anticipatory grief is real and you deserve support.",
+      ],
+    },
+    {
+      period: "Week 2+",
+      intro: "Looking ahead with the right support around you.",
+      items: [
+        "Ask about advance directives if not already in place. caringinfo.org has free resources.",
+        "Plan for respite. Even a few hours matters.",
+        "Connect with others who have been through this",
+      ],
+    },
   ],
   "Hospice care": [
-    { period: "Today", items: ["Ask the hospice team what to expect in the coming days and weeks", "Make sure everyone who needs to be there knows how to get there", "Tell the people who love you that you need support too"] },
-    { period: "Days 1–3", items: ["Ask the hospice social worker about grief resources for family members", "Clarify what the hospice team handles vs. what falls to you", "Write down anything your loved one has expressed about their wishes"] },
-    { period: "Days 4–7", items: ["Designate one family member as the primary contact for updates", "Allow yourself to grieve. You don't have to wait.", "Ask about bereavement support. Most hospice organizations offer it."] },
-    { period: "Week 2+", items: ["Take care of practical documents if not already done", "Stay connected to the hospice social worker", "Remember that being present is enough — you don't have to fix this"] },
+    {
+      period: "Today",
+      intro: "These are the only things worth thinking about right now.",
+      items: [
+        "Ask the hospice team what to expect in the coming days and weeks",
+        "Make sure everyone who needs to be there knows how to get there",
+        "Tell the people who love you that you need support too",
+      ],
+    },
+    {
+      period: "Days 1–3",
+      intro: "Small steps to make sure nothing important is missed.",
+      items: [
+        "Ask the hospice social worker about grief resources for family members",
+        "Clarify what the hospice team handles vs. what falls to you",
+        "Write down anything your loved one has expressed about their wishes",
+      ],
+    },
+    {
+      period: "Days 4–7",
+      intro: "Focusing on what you can control, and letting go of the rest.",
+      items: [
+        "Designate one family member as the primary contact for updates",
+        "Allow yourself to grieve. You don't have to wait.",
+        "Ask about bereavement support. Most hospice organizations offer it.",
+      ],
+    },
+    {
+      period: "Week 2+",
+      intro: "Allowing yourself to be held through what comes next.",
+      items: [
+        "Take care of practical documents if not already done",
+        "Stay connected to the hospice social worker",
+        "Remember that being present is enough. You don't have to fix this.",
+      ],
+    },
   ],
   "Bereavement": [
-    { period: "Today", items: ["You don't have to do anything today except be", "Call one person who can sit with you, even quietly", "Know that what you are feeling is real and it is allowed"] },
-    { period: "Days 1–3", items: ["Handle only what is truly urgent. Most things can wait.", "Eat something. Sleep if you can. Ask for help with both.", "Let people help you in concrete ways: meals, errands, presence"] },
-    { period: "Days 4–7", items: ["Look into bereavement support — GriefShare, hospice bereavement programs, or a therapist", "Begin notifying institutions only as you have energy", "Know that grief is not linear and there is no timeline you have to follow"] },
-    { period: "Week 2+", items: ["Consider a grief group — being with others who understand is powerful", "Be patient with yourself as your identity shifts outside the caregiving role", "The Family Caregiver Alliance (caregiver.org) has bereavement resources specifically for former caregivers"] },
+    {
+      period: "Today",
+      intro: "There is nothing you have to do today except be here.",
+      items: [
+        "You don't have to do anything today except be",
+        "Call one person who can sit with you, even quietly",
+        "Know that what you are feeling is real and it is allowed",
+      ],
+    },
+    {
+      period: "Days 1–3",
+      intro: "Small steps. That's all. One at a time.",
+      items: [
+        "Handle only what is truly urgent. Most things can wait.",
+        "Eat something. Sleep if you can. Ask for help with both.",
+        "Let people help you in concrete ways: meals, errands, presence",
+      ],
+    },
+    {
+      period: "Days 4–7",
+      intro: "Grief doesn't follow a timeline. Neither should you.",
+      items: [
+        "Look into bereavement support — GriefShare, hospice bereavement programs, or a therapist",
+        "Begin notifying institutions only as you have energy",
+        "Know that grief is not linear and there is no timeline you have to follow",
+      ],
+    },
+    {
+      period: "Week 2+",
+      intro: "Finding the support and community that can hold you through this.",
+      items: [
+        "Consider a grief group — being with others who understand is powerful",
+        "Be patient with yourself as your identity shifts outside the caregiving role",
+        "The Family Caregiver Alliance (caregiver.org) has bereavement resources specifically for former caregivers",
+      ],
+    },
   ],
 };
 
@@ -87,14 +232,6 @@ const RESOURCES = [
   { name: "CaringInfo", desc: "Free advance directive forms and hospice information from the National Hospice Foundation.", url: "https://caringinfo.org" },
   { name: "GriefShare", desc: "Support groups for people grieving a death, including anticipatory grief resources.", url: "https://griefshare.org" },
   { name: "AARP Caregiver Support", desc: "Local and virtual caregiver support groups, articles, and a helpline.", url: "https://aarp.org/caregiving" },
-];
-
-const WN_CONCERNS = [
-  "Medical decisions and next steps",
-  "Insurance and financial concerns",
-  "Daily caregiving logistics",
-  "Emotional support",
-  "Coordinating with family",
 ];
 
 export default function Home() {
@@ -117,11 +254,7 @@ export default function Home() {
   const [fhirError, setFhirError]               = useState<string | null>(null);
   const [fhirLoaded, setFhirLoaded]             = useState(false);
   const [wnConcern, setWnConcern]               = useState<string | null>(null);
-  const [wnHours, setWnHours]                   = useState("");
-  const [wnIsPrimary, setWnIsPrimary]           = useState<boolean | null>(null);
   const [wnPlan, setWnPlan]                     = useState<WnPlan | null>(null);
-  const [wnLoading, setWnLoading]               = useState(false);
-  const [wnError, setWnError]                   = useState<string | null>(null);
 
   function goTo(s: Step) {
     setStep(s);
@@ -166,24 +299,35 @@ export default function Home() {
     goTo("loading");
     setError(null);
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stage,
-          situation: situationChoice === "Something else" ? situationOther : situationChoice,
-          situationMore: "",
-          medical, medications, allergies, recentChanges,
-          caregiverWellbeing: wellbeing.join(", "),
+      const [briefRes, planRes] = await Promise.all([
+        fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            stage,
+            situation: situationChoice === "Something else" ? situationOther : situationChoice,
+            situationMore: "",
+            medical, medications, allergies, recentChanges,
+            caregiverWellbeing: wellbeing.join(", "),
+          }),
         }),
-      });
-      if (!res.ok) throw new Error("Generation failed");
-      const data = await res.json();
-      setBrief(data);
+        fetch("/api/whats-next", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ careStage: stage, concern: wnConcern }),
+        }),
+      ]);
+      if (!briefRes.ok) throw new Error("Generation failed");
+      const briefData = await briefRes.json();
+      setBrief(briefData);
+      if (planRes.ok) {
+        const planData = await planRes.json();
+        setWnPlan(planData);
+      }
       goTo("brief");
     } catch {
       setError("Something went wrong. Please try again.");
-      goTo("q3");
+      goTo("q4");
     }
   }
 
@@ -194,35 +338,7 @@ export default function Home() {
     setHadRecentChanges(null); setMedsOpen(false); setAllergiesOpen(false);
     setWellbeing([]); setBrief(null); setError(null);
     setFhirId(""); setFhirLoading(false); setFhirError(null); setFhirLoaded(false);
-    setWnConcern(null); setWnHours(""); setWnIsPrimary(null);
-    setWnPlan(null); setWnLoading(false); setWnError(null);
-  }
-
-  function selectConcern(concern: string) {
-    setWnConcern(concern);
-    setWnHours("");
-    setWnIsPrimary(null);
-    setWnError(null);
-  }
-
-  async function buildPlan() {
-    if (!wnConcern || !wnHours || wnIsPrimary === null) return;
-    setWnLoading(true);
-    setWnError(null);
-    try {
-      const res = await fetch("/api/whats-next", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ careStage: stage, concern: wnConcern, hoursPerWeek: wnHours, isPrimary: wnIsPrimary }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      setWnPlan(data);
-    } catch {
-      setWnError("Something went wrong. Please try again.");
-    } finally {
-      setWnLoading(false);
-    }
+    setWnConcern(null); setWnPlan(null);
   }
 
   const dateStr = new Date().toLocaleDateString("en-US", {
@@ -380,7 +496,7 @@ export default function Home() {
         .big-q { font-family: 'Cormorant Garamond', serif; font-size: clamp(22px,4vw,30px); font-weight: 500; color: var(--ink); line-height: 1.35; margin-bottom: 0.75rem; letter-spacing: -0.01em; }
         .q-sub { font-size: 15px; color: var(--muted); line-height: 1.6; margin-bottom: 1.75rem; }
 
-        /* Banner — neutral info card, no colored border */
+        /* Banner — neutral info, no colored border */
         .banner { display: flex; gap: 12px; align-items: flex-start; background: #FAF7F4; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 1.75rem; }
         .banner-text { font-size: 14px; color: var(--ink-soft); line-height: 1.6; }
         .banner.warm { background: #FAF7F4; }
@@ -396,7 +512,7 @@ export default function Home() {
         .s-check { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
         .stage-btn.sel .s-check { background: var(--burg); border-color: var(--burg); }
 
-        /* Situation options (Q1 — same visual as stage-btn) */
+        /* Situation options — same visual as stage-btn */
         .sit-grid { display: flex; flex-direction: column; gap: 10px; }
         .sit-btn { width: 100%; text-align: left; padding: 15px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 14px; transition: all 0.15s; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--ink-soft); }
         .sit-btn:hover { border-color: var(--burg-border); background: var(--burg-light); color: var(--burg); }
@@ -421,7 +537,7 @@ export default function Home() {
         input[type="text"] { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); background: var(--surface); transition: border-color 0.15s; }
         input[type="text"]:focus { outline: none; border-color: var(--burg); box-shadow: 0 0 0 3px rgba(114,47,55,0.1); }
 
-        /* Checkboxes */
+        /* Wellbeing checkboxes */
         .check-list { display: flex; flex-direction: column; gap: 8px; }
         .check-item { display: flex; align-items: flex-start; gap: 14px; padding: 15px 17px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; user-select: none; transition: all 0.15s; }
         .check-item:hover { border-color: var(--burg-border); background: var(--burg-light); }
@@ -455,7 +571,7 @@ export default function Home() {
         /* Error — reserved for actual errors only */
         .error-banner { background: #FFF0F0; border: 1px solid #FFC0C0; border-radius: var(--radius-md); padding: 14px 16px; margin-top: 1rem; font-size: 14px; color: #8B2020; }
 
-        /* Q2b yes/no buttons */
+        /* Q2b yes/no */
         .yn-row { display: flex; gap: 10px; }
         .yn-btn { flex: 1; padding: 15px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 500; color: var(--ink-soft); cursor: pointer; transition: all 0.15s; text-align: center; }
         .yn-btn:hover { border-color: var(--burg-border); background: var(--burg-light); }
@@ -472,31 +588,46 @@ export default function Home() {
         .loading-heading { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 400; color: var(--ink); margin-bottom: 8px; }
         .loading-sub { font-size: 15px; color: var(--faint); }
 
-        /* Brief */
+        /* ── Brief ── */
         .brief-wrap { max-width: 660px; margin: 0 auto; padding: 2.5rem 2rem 6rem; }
-        .brief-top { padding-bottom: 2rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
-        .brief-wm  { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; }
-        .brief-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; margin-bottom: 4px; }
-        .brief-meta  { font-size: 14px; color: var(--faint); }
-        .brief-glance { background: var(--burg-light); border: 1px solid var(--burg-border); border-radius: var(--radius-md); padding: 16px 20px; margin-bottom: 10px; }
-        .brief-glance-label { font-size: 11px; font-weight: 500; color: var(--burg); text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 10px; }
-        .brief-glance-body { font-family: 'Cormorant Garamond', serif; font-size: 16px; color: var(--burg-deep); line-height: 1.65; }
-        .brief-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--burg); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 20px 22px; margin-bottom: 12px; }
-        .brief-card-label { font-size: 10px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
+        .brief-top { padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+        .brief-top-left { display: flex; flex-direction: column; gap: 2px; }
+        .brief-wm  { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; }
+        .brief-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
+        .brief-meta  { font-size: 14px; color: var(--faint); margin-top: 3px; }
+
+        /* AT A GLANCE — sage green, no border */
+        .brief-glance { background: var(--sage-light); border-radius: var(--radius-md); padding: 18px 20px; margin-bottom: 12px; }
+        .brief-glance-label { font-size: 11px; font-weight: 600; color: var(--sage-border); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+        .brief-glance-body { font-family: 'Cormorant Garamond', serif; font-size: 17px; color: var(--ink); line-height: 1.7; }
+
+        /* Brief field cards — sage left border, no burg */
+        .brief-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--sage-border); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 18px 22px; margin-bottom: 10px; }
+        .brief-card-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
         .brief-card-body  { font-size: 16px; color: var(--ink); line-height: 1.75; }
+
+        /* Disclosure */
         .disclosure { font-size: 13px; font-style: italic; color: var(--faint); line-height: 1.6; margin-top: 2rem; }
 
-        /* For the caregiver */
-        .ftc-section { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
-        .ftc-eyebrow { font-size: 12px; font-weight: 500; color: var(--burg); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+        /* Section divider */
+        .section-divider { display: flex; align-items: center; gap: 14px; margin: 2.5rem 0 1.75rem; }
+        .section-divider-line { flex: 1; height: 1px; background: var(--border); }
+        .section-divider-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; white-space: nowrap; }
+
+        /* For the caregiver section */
+        .ftc-section { margin-top: 2rem; }
         .ftc-ack { font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 400; color: var(--ink-soft); line-height: 1.7; margin-bottom: 2rem; font-style: italic; }
-        .timeline-period { margin-bottom: 1.5rem; }
-        .tl-label { font-size: 12px; font-weight: 500; color: var(--burg); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 8px; }
-        .tl-label::after { content: ''; flex: 1; height: 1px; background: var(--burg-border); }
+
+        /* Timeline — guide style */
+        .timeline-period { margin-bottom: 2rem; }
+        .tl-label { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; color: var(--burg); line-height: 1.2; margin-bottom: 5px; }
+        .tl-intro { font-size: 14px; color: var(--muted); font-style: italic; line-height: 1.6; margin-bottom: 12px; }
         .tl-items { display: flex; flex-direction: column; gap: 8px; }
-        .tl-item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); }
-        .tl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--burg); flex-shrink: 0; margin-top: 7px; }
+        .tl-item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); }
+        .tl-checkbox { width: 17px; height: 17px; border-radius: 4px; border: 1.5px solid var(--border); flex-shrink: 0; margin-top: 3px; background: white; }
         .tl-text { font-size: 15px; color: var(--ink-soft); line-height: 1.55; }
+
+        /* Resources */
         .resources-section { margin-top: 2rem; }
         .res-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 500; color: var(--ink); margin-bottom: 1rem; }
         .res-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 10px; }
@@ -506,28 +637,9 @@ export default function Home() {
         .res-link { font-size: 13px; color: var(--burg); text-decoration: none; font-weight: 500; }
         .res-link:hover { text-decoration: underline; }
 
-        /* What's Next */
-        .wn-section { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border); }
-        .wn-eyebrow { font-size: 11px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
-        .wn-heading { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 500; color: var(--ink); line-height: 1.3; margin-bottom: 0.6rem; }
-        .wn-context { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 1.25rem; }
-        .wn-options { display: flex; flex-direction: column; gap: 10px; }
-        .wn-option { width: 100%; text-align: left; padding: 17px 20px; background: var(--sage-light); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 500; color: var(--ink-soft); transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 14px; }
-        .wn-option:hover { border-color: var(--burg-border); background: var(--burg-light); color: var(--burg-deep); }
-        .wn-details { margin-top: 1.25rem; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; gap: 18px; }
-        .wn-det-label { font-size: 14px; font-weight: 500; color: var(--ink-soft); margin-bottom: 9px; }
-        .wn-pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
-        .wn-pill { flex: 1; min-width: 80px; padding: 10px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; text-align: center; }
-        .wn-pill:hover { border-color: var(--burg-border); color: var(--ink); }
-        .wn-pill.sel { background: var(--burg-light); border: 2px solid var(--burg); color: var(--burg); font-weight: 500; }
-        .wn-mini-progress { height: 2px; background: var(--border-soft); border-radius: 100px; overflow: hidden; margin-bottom: 1.5rem; }
-        .wn-mini-fill { height: 100%; background: var(--sage-border); border-radius: 100px; }
-        .wn-loading { display: flex; flex-direction: column; align-items: center; padding: 2.5rem 1rem; gap: 0.75rem; }
-        .wn-loading-text { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--ink); }
-        .wn-plan-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 1.75rem; position: sticky; top: 0; background: var(--bg); padding: 1rem 0; z-index: 10; border-bottom: 1px solid var(--border-soft); }
-        .wn-plan-meta { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
-        .wn-print-btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 20px; background: var(--burg); border: none; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: #FAF0F1; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, box-shadow 0.15s; box-shadow: 0 4px 14px rgba(114,47,55,0.22); }
-        .wn-print-btn:hover { background: var(--burg-deep); box-shadow: 0 6px 18px rgba(114,47,55,0.3); }
+        /* 30-Day Action Plan section */
+        .plan-section { margin-top: 2rem; }
+        .plan-concern-tag { font-size: 14px; color: var(--muted); display: block; margin-bottom: 1.25rem; }
         .wn-card { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--sage-border); border-radius: var(--radius-md); margin-bottom: 14px; overflow: hidden; }
         .wn-card-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border-soft); }
         .wn-card-week { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; color: var(--ink); display: block; line-height: 1.2; }
@@ -538,13 +650,17 @@ export default function Home() {
         .wn-check-text { font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
         .wn-disclaimer { font-size: 13px; font-style: italic; color: var(--faint); line-height: 1.6; margin-top: 1.5rem; }
 
+        /* Print button */
+        .print-btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 18px; background: var(--burg); border: none; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: #FAF0F1; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, box-shadow 0.15s; box-shadow: 0 4px 14px rgba(114,47,55,0.22); margin-top: 0.5rem; }
+        .print-btn:hover { background: var(--burg-deep); box-shadow: 0 6px 18px rgba(114,47,55,0.3); }
+
         /* Print */
         @media print {
           .hero-bg, .q-wrap .btn-primary, .q-wrap .btn-ghost, .no-print { display: none !important; }
           .brief-wrap { padding: 1rem; max-width: 100%; }
           .ftc-section { page-break-before: always; }
-          .wn-section { page-break-before: always; }
-          .wn-plan-header { position: static; border-bottom: none; padding: 0 0 1rem; }
+          .plan-section { page-break-before: always; }
+          .brief-top { flex-direction: column; }
         }
 
         /* Responsive */
@@ -552,6 +668,7 @@ export default function Home() {
           .what-cards { grid-template-columns: 1fr; }
           .hero { padding: 3rem 1.25rem 3rem; }
           .q-wrap { padding: 2rem 1.25rem 5rem; }
+          .brief-top { flex-direction: column; gap: 12px; }
         }
 
         button:focus-visible, textarea:focus-visible, input:focus-visible {
@@ -646,7 +763,7 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("hero")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"14%"}} /></div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"16%"}} /></div>
           <div className="progress-label">Getting started</div>
           <h2 className="big-q">Where are you right now?</h2>
           <p className="q-sub">This shapes your brief and the questions we ask. There are no wrong answers.</p>
@@ -669,9 +786,9 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("stage")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"33%"}} /></div>
-          <div className="progress-label">Step 1 of 4: The situation</div>
-          <h2 className="big-q">What best describes the situation?</h2>
+          <div className="progress-track"><div className="progress-fill" style={{width:"32%"}} /></div>
+          <div className="progress-label">Step 1 of 5: The situation</div>
+          <h2 className="big-q">What best describes the situation right now?</h2>
           <p className="q-sub">Pick the one that fits closest. You can add details on the next screen.</p>
           <div className="sit-grid">
             {SITUATION_OPTIONS.map(opt => (
@@ -711,9 +828,9 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("q1")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"52%"}} /></div>
-          <div className="progress-label">Step 2 of 4: Medical overview</div>
-          <h2 className="big-q">What conditions or diagnoses have they been given?</h2>
+          <div className="progress-track"><div className="progress-fill" style={{width:"48%"}} /></div>
+          <div className="progress-label">Step 2 of 5: Medical overview</div>
+          <h2 className="big-q">What do we need to know medically?</h2>
           <p className="q-sub">Condition names only. No record numbers or personal identifiers needed.</p>
 
           <div className="fhir-prefill-card">
@@ -729,12 +846,12 @@ export default function Home() {
           </div>
 
           <div className="field">
-            <label className="field-label" htmlFor="medical">Conditions</label>
+            <label className="field-label" htmlFor="medical">What condition or diagnosis are you managing?</label>
             <textarea
               id="medical"
               value={medical}
               onChange={e => setMedical(e.target.value)}
-              placeholder="e.g. diabetes, congestive heart failure, dementia, Parkinson's..."
+              placeholder="e.g. stage 3 breast cancer, early Alzheimer's, heart failure after a recent hospitalization"
               rows={3}
             />
             <div className="chip-row">
@@ -751,12 +868,12 @@ export default function Home() {
                   Add medications <span className="opt-tag">Optional</span>
                 </button>
               : <>
-                  <label className="field-label" htmlFor="medications">Medications</label>
+                  <label className="field-label" htmlFor="medications">Are there medications involved? If so, which ones?</label>
                   <textarea
                     id="medications"
                     value={medications}
                     onChange={e => setMedications(e.target.value)}
-                    placeholder="Drug name and how often, e.g. Lisinopril once daily, Metformin twice with meals..."
+                    placeholder="e.g. Lisinopril once daily for blood pressure, Aricept for memory. Just names and how often is enough."
                     rows={3}
                   />
                 </>
@@ -770,12 +887,12 @@ export default function Home() {
                   Add known allergies <span className="opt-tag">Optional</span>
                 </button>
               : <>
-                  <label className="field-label" htmlFor="allergies">Known allergies</label>
+                  <label className="field-label" htmlFor="allergies">Any allergies we should know about?</label>
                   <textarea
                     id="allergies"
                     value={allergies}
                     onChange={e => setAllergies(e.target.value)}
-                    placeholder="Substance names only..."
+                    placeholder="e.g. penicillin, sulfa drugs, latex. Only include if relevant to care decisions."
                     rows={2}
                   />
                 </>
@@ -792,10 +909,10 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("q2")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"71%"}} /></div>
-          <div className="progress-label">Step 3 of 4: Recent changes</div>
-          <h2 className="big-q">Has anything changed recently?</h2>
-          <p className="q-sub">A new diagnosis, hospitalization, or shift in care can change everything. This helps us reflect that in your brief.</p>
+          <div className="progress-track"><div className="progress-fill" style={{width:"64%"}} /></div>
+          <div className="progress-label">Step 3 of 5: Recent changes</div>
+          <h2 className="big-q">Has anything changed recently that we should know about?</h2>
+          <p className="q-sub">A new diagnosis, a recent hospitalization, a shift in their condition. Anything that feels significant.</p>
           <div className="yn-row">
             <button
               className={`yn-btn${hadRecentChanges === true ? " sel" : ""}`}
@@ -833,14 +950,13 @@ export default function Home() {
         <div className="q-wrap">
           <button className="btn-back" onClick={() => goTo("q2b")}>← Back</button>
           <QWordmark />
-          <div className="progress-track"><div className="progress-fill" style={{width:"90%"}} /></div>
-          <div className="progress-label">Step 4 of 4: Just for you</div>
+          <div className="progress-track"><div className="progress-fill" style={{width:"80%"}} /></div>
+          <div className="progress-label">Step 4 of 5: Just for you</div>
           <h2 className="big-q">How are you doing in all of this?</h2>
           <div className="banner warm">
             <span style={{fontSize:16,flexShrink:0,marginTop:1}}>🌿</span>
             <span className="banner-text">This part is just for you. Nothing you share here shows up in the brief.</span>
           </div>
-          {error && <div className="error-banner">{error}</div>}
           <div className="check-list">
             {WELLBEING_OPTIONS.map(o => (
               <label className="check-item" key={o.value}>
@@ -849,8 +965,34 @@ export default function Home() {
               </label>
             ))}
           </div>
-          <button className="btn-primary" onClick={generate}>Generate my brief →</button>
-          <button className="btn-ghost" onClick={generate}>Skip and generate</button>
+          <button className="btn-primary" onClick={() => goTo("q4")}>Continue →</button>
+          <button className="btn-ghost" onClick={() => goTo("q4")}>Skip and continue</button>
+        </div>
+      )}
+
+      {/* ═══ Q4 — What would help most ═══ */}
+      {step === "q4" && (
+        <div className="q-wrap">
+          <button className="btn-back" onClick={() => goTo("q3")}>← Back</button>
+          <QWordmark />
+          <div className="progress-track"><div className="progress-fill" style={{width:"96%"}} /></div>
+          <div className="progress-label">Step 5 of 5: Your priority</div>
+          <h2 className="big-q">What would help most right now?</h2>
+          <p className="q-sub">We&apos;ll build your 30-day action plan around your answer.</p>
+          {error && <div className="error-banner" style={{marginBottom:"1.5rem"}}>{error}</div>}
+          <div className="stage-grid">
+            {WN_CONCERNS.map(c => (
+              <button key={c} className={`stage-btn${wnConcern === c ? " sel" : ""}`} onClick={() => setWnConcern(c)}>
+                <div><div className="s-name">{c}</div></div>
+                <div className="s-check">
+                  {wnConcern === c && <svg width="10" height="8" viewBox="0 0 12 9" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4.5L4.5 8 11 1"/></svg>}
+                </div>
+              </button>
+            ))}
+          </div>
+          <button className="btn-primary" disabled={!wnConcern} onClick={generate}>
+            Generate my brief →
+          </button>
         </div>
       )}
 
@@ -869,24 +1011,34 @@ export default function Home() {
       {/* ═══ BRIEF ═══ */}
       {step === "brief" && brief && (
         <div className="brief-wrap">
+
+          {/* Header */}
           <div className="brief-top">
-            <div className="brief-wm">
-              <div className="q-wm-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FAF0F1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/>
-                </svg>
+            <div className="brief-top-left">
+              <div className="brief-wm">
+                <div className="q-wm-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FAF0F1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/>
+                  </svg>
+                </div>
+                <span style={{fontFamily:"Cormorant Garamond,serif",fontSize:16,color:"var(--burg)",letterSpacing:"0.06em",textTransform:"uppercase" as const}}>Hearth</span>
               </div>
-              <span style={{fontFamily:"Cormorant Garamond,serif",fontSize:16,color:"var(--burg)",letterSpacing:"0.06em",textTransform:"uppercase" as const}}>Hearth</span>
+              <div className="brief-title">Caregiver Brief</div>
+              <div className="brief-meta">{dateStr}</div>
             </div>
-            <div className="brief-title">Caregiver Brief</div>
-            <div className="brief-meta">{dateStr}</div>
+            <button className="print-btn no-print" onClick={() => window.print()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Print
+            </button>
           </div>
 
+          {/* AT A GLANCE — sage green */}
           <div className="brief-glance">
             <div className="brief-glance-label">At a glance</div>
             <div className="brief-glance-body">{brief.atAGlance}</div>
           </div>
 
+          {/* Field cards — sage left border */}
           {brief.careStage && <BriefCard label="Care stage" body={brief.careStage} />}
           {brief.conditions && <BriefCard label="Conditions" body={brief.conditions} />}
           {brief.medications && <BriefCard label="Medications" body={brief.medications} />}
@@ -896,18 +1048,26 @@ export default function Home() {
           {brief.comfortGoals && <BriefCard label="Comfort and care goals" body={brief.comfortGoals} />}
           {brief.importantNotes && <BriefCard label="Recent changes and notes" body={brief.importantNotes} />}
 
+          {/* For the caregiver — subtle divider, guide-style timeline */}
           {stage && (
             <div className="ftc-section">
-              <div className="ftc-eyebrow">For the caregiver</div>
+              <div className="section-divider">
+                <div className="section-divider-line" />
+                <span className="section-divider-label">For you</span>
+                <div className="section-divider-line" />
+              </div>
+
               {brief.forYou && <p className="ftc-ack">{brief.forYou}</p>}
+
               <div style={{marginBottom:"1.5rem"}}>
                 {TIMELINE[stage].map(block => (
                   <div className="timeline-period" key={block.period}>
                     <div className="tl-label">{block.period}</div>
+                    <p className="tl-intro">{block.intro}</p>
                     <div className="tl-items">
                       {block.items.map(item => (
                         <div className="tl-item" key={item}>
-                          <div className="tl-dot" />
+                          <div className="tl-checkbox" aria-hidden="true" />
                           <div className="tl-text">{item}</div>
                         </div>
                       ))}
@@ -915,6 +1075,7 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+
               <div className="resources-section">
                 <div className="res-title">Where to find support</div>
                 {RESOURCES.map(r => (
@@ -935,126 +1096,61 @@ export default function Home() {
             Generated with AI assistance on {dateStr}. For organizational purposes only. Not a medical record. Not a substitute for professional medical or legal advice.
           </p>
 
-          {/* What's Next */}
-          <div className="wn-section">
-
-            {/* Step 1: Choose concern */}
-            {!wnConcern && !wnLoading && (
-              <div className="no-print">
-                <div className="wn-eyebrow">What&apos;s Next?</div>
-                <h3 className="wn-heading">One more step: what do you need most right now?</h3>
-                <p className="wn-context">We&apos;ll use your care stage to build a 30-day action plan around your answer.</p>
-                <div className="wn-options">
-                  {WN_CONCERNS.map(c => (
-                    <button key={c} className="wn-option" onClick={() => selectConcern(c)}>
-                      {c}
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    </button>
-                  ))}
-                </div>
+          {/* 30-Day Action Plan */}
+          {wnPlan && (
+            <div className="plan-section">
+              <div className="section-divider">
+                <div className="section-divider-line" />
+                <span className="section-divider-label">Your 30-Day Action Plan</span>
+                <div className="section-divider-line" />
               </div>
-            )}
 
-            {/* Step 2: Quick details */}
-            {wnConcern && !wnPlan && !wnLoading && (
-              <div className="no-print">
-                <div className="wn-mini-progress"><div className="wn-mini-fill" style={{width:"60%"}} /></div>
-                <div className="wn-eyebrow">What&apos;s Next? · Step 2 of 2</div>
-                <h3 className="wn-heading" style={{marginBottom:"0.4rem"}}>{wnConcern}</h3>
-                <button onClick={() => selectConcern("")} style={{background:"none",border:"none",fontFamily:"inherit",fontSize:13,color:"var(--muted)",cursor:"pointer",padding:"0 0 1.25rem",display:"block"}}>← Change concern</button>
-                {wnError && <div className="error-banner" style={{marginBottom:"1rem"}}>{wnError}</div>}
-                <div className="wn-details">
-                  <div>
-                    <div className="wn-det-label">How many hours per week do you have available?</div>
-                    <div className="wn-pill-row">
-                      {[["Less than 5 hours","< 5 hrs"],["5 to 10 hours","5–10 hrs"],["10 or more hours","10+ hrs"]].map(([val, label]) => (
-                        <button key={val} className={`wn-pill${wnHours === val ? " sel" : ""}`} onClick={() => setWnHours(val)}>{label}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="wn-det-label">Are you the primary caregiver?</div>
-                    <div className="wn-pill-row" style={{maxWidth:200}}>
-                      <button className={`wn-pill${wnIsPrimary === true ? " sel" : ""}`} onClick={() => setWnIsPrimary(wnIsPrimary === true ? null : true)}>Yes</button>
-                      <button className={`wn-pill${wnIsPrimary === false ? " sel" : ""}`} onClick={() => setWnIsPrimary(wnIsPrimary === false ? null : false)}>No</button>
-                    </div>
-                  </div>
+              {wnConcern && <span className="plan-concern-tag">{wnConcern}</span>}
+
+              <div className="wn-card">
+                <div className="wn-card-header">
+                  <span className="wn-card-week">Week 1</span>
+                  <span className="wn-card-sub">Right Now</span>
                 </div>
-                <button className="btn-primary" style={{marginTop:"1.25rem"}} disabled={!wnHours || wnIsPrimary === null} onClick={buildPlan}>
-                  Build my plan →
-                </button>
+                {wnPlan.week1.map((item, i) => (
+                  <div className="wn-check-row" key={i}>
+                    <div className="wn-checkbox" aria-hidden="true" />
+                    <div className="wn-check-text">{item}</div>
+                  </div>
+                ))}
               </div>
-            )}
 
-            {/* Loading */}
-            {wnLoading && (
-              <div className="wn-loading no-print" role="status" aria-live="polite">
-                <div className="loading-dots" aria-hidden="true">
-                  <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
+              <div className="wn-card">
+                <div className="wn-card-header">
+                  <span className="wn-card-week">Weeks 2–3</span>
+                  <span className="wn-card-sub">This Month</span>
                 </div>
-                <div className="wn-loading-text">Building your plan...</div>
+                {wnPlan.weeks23.map((item, i) => (
+                  <div className="wn-check-row" key={i}>
+                    <div className="wn-checkbox" aria-hidden="true" />
+                    <div className="wn-check-text">{item}</div>
+                  </div>
+                ))}
               </div>
-            )}
 
-            {/* Plan output */}
-            {wnPlan && !wnLoading && (
-              <>
-                <div className="wn-plan-header">
-                  <div>
-                    <div className="wn-eyebrow">Your Care Plan</div>
-                    <div className="wn-plan-meta">{stage} &middot; {wnConcern}</div>
-                  </div>
-                  <button className="wn-print-btn no-print" onClick={() => window.print()}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                    Print this plan
-                  </button>
+              <div className="wn-card">
+                <div className="wn-card-header">
+                  <span className="wn-card-week">Week 4</span>
+                  <span className="wn-card-sub">Looking Ahead</span>
                 </div>
-
-                <div className="wn-card">
-                  <div className="wn-card-header">
-                    <span className="wn-card-week">Week 1</span>
-                    <span className="wn-card-sub">Right Now</span>
+                {wnPlan.week4.map((item, i) => (
+                  <div className="wn-check-row" key={i}>
+                    <div className="wn-checkbox" aria-hidden="true" />
+                    <div className="wn-check-text">{item}</div>
                   </div>
-                  {wnPlan.week1.map((item, i) => (
-                    <div className="wn-check-row" key={i}>
-                      <div className="wn-checkbox" aria-hidden="true" />
-                      <div className="wn-check-text">{item}</div>
-                    </div>
-                  ))}
-                </div>
+                ))}
+              </div>
 
-                <div className="wn-card">
-                  <div className="wn-card-header">
-                    <span className="wn-card-week">Weeks 2–3</span>
-                    <span className="wn-card-sub">This Month</span>
-                  </div>
-                  {wnPlan.weeks23.map((item, i) => (
-                    <div className="wn-check-row" key={i}>
-                      <div className="wn-checkbox" aria-hidden="true" />
-                      <div className="wn-check-text">{item}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="wn-card">
-                  <div className="wn-card-header">
-                    <span className="wn-card-week">Week 4</span>
-                    <span className="wn-card-sub">Looking Ahead</span>
-                  </div>
-                  {wnPlan.week4.map((item, i) => (
-                    <div className="wn-check-row" key={i}>
-                      <div className="wn-checkbox" aria-hidden="true" />
-                      <div className="wn-check-text">{item}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <p className="wn-disclaimer">
-                  This plan is a starting point. Always consult your care team for medical decisions.
-                </p>
-              </>
-            )}
-          </div>
+              <p className="wn-disclaimer">
+                This plan is a starting point. Always consult your care team for medical decisions.
+              </p>
+            </div>
+          )}
 
           <div className="no-print" style={{marginTop:"2.5rem",display:"flex",flexDirection:"column" as const,gap:8}}>
             <p style={{fontSize:13,color:"var(--muted)",marginBottom:4}}>Review everything before sharing. AI can make mistakes.</p>
