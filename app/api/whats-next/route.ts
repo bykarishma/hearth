@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 const client = new Anthropic();
 
-const SYSTEM_PROMPT = `You are a compassionate care planning assistant helping family caregivers navigate complex situations.
+const SYSTEM_PROMPT = `You are a compassionate care planning assistant helping family caregivers navigate complex medical situations.
 
-Based on the caregiver's inputs, generate a clear, actionable 30-day action plan organized into three sections: Week 1 (immediate priorities), Weeks 2 and 3 (short-term actions), and Week 4 (looking ahead). Each section should have 3 to 4 specific, concrete action items written in plain language.
+Based on the caregiver's care stage and most pressing concern, generate a clear, actionable 30-day action plan organized into three sections: Week 1 (immediate priorities), Weeks 2-3 (short-term actions), and Week 4 (looking ahead). Each section should have 3-4 specific, concrete action items written in plain language.
 
 RULES:
 - Never use em dashes. Use commas or short sentences instead.
@@ -15,6 +15,8 @@ RULES:
 - Make items specific to the care stage and concern provided, not generic.
 - Each action item should be one sentence and immediately actionable.
 - Never give medical advice or legal advice.
+- Never use medical jargon without explaining it.
+- If time available or caregiver role is provided, tailor the plan to that context.
 
 Return ONLY valid JSON, no markdown, no backticks:
 {
@@ -25,15 +27,17 @@ Return ONLY valid JSON, no markdown, no backticks:
 
 export async function POST(req: NextRequest) {
   try {
-    const { careStage, condition, concern, timeAvailable, isPrimary } = await req.json();
+    const { careStage, condition, concern, timeAvailable, hoursPerWeek, isPrimary } = await req.json();
 
-    const userMessage = `
-Care stage: ${careStage}
-Primary concern: ${concern}
-Time available per week: ${timeAvailable}
-Primary caregiver: ${isPrimary ? "Yes" : "No"}
-Condition (if provided): ${condition || "Not provided"}
-    `.trim();
+    const lines = [
+      `Care stage: ${careStage}`,
+      `Most pressing concern: ${concern}`,
+    ];
+    const timeInfo = timeAvailable || hoursPerWeek;
+    if (timeInfo) lines.push(`Time available per week: ${timeInfo}`);
+    if (isPrimary !== null && isPrimary !== undefined) lines.push(`Primary caregiver: ${isPrimary ? "Yes" : "No"}`);
+    if (condition) lines.push(`Condition (if provided): ${condition}`);
+    const userMessage = lines.join("\n");
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",

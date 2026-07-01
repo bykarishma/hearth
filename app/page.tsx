@@ -19,6 +19,12 @@ interface Brief {
   forYou: string | null;
 }
 
+interface WnPlan {
+  week1: string[];
+  weeks23: string[];
+  week4: string[];
+}
+
 const STAGES: { id: Stage; desc: string }[] = [
   { id: "Active care",     desc: "Managing an ongoing condition or recovery" },
   { id: "Palliative care", desc: "Focus has shifted to comfort and quality of life" },
@@ -72,6 +78,14 @@ const RESOURCES = [
   { name: "AARP Caregiver Support", desc: "Local and virtual caregiver support groups, articles, and a helpline.", url: "https://aarp.org/caregiving" },
 ];
 
+const WN_CONCERNS = [
+  "Medical decisions and next steps",
+  "Insurance and financial concerns",
+  "Daily caregiving logistics",
+  "Emotional support",
+  "Coordinating with family",
+];
+
 export default function Home() {
   const [step, setStep]                   = useState<Step>("hero");
   const [stage, setStage]                 = useState<Stage | null>(null);
@@ -88,6 +102,14 @@ export default function Home() {
   const [fhirLoading, setFhirLoading]     = useState(false);
   const [fhirError, setFhirError]         = useState<string | null>(null);
   const [fhirLoaded, setFhirLoaded]       = useState(false);
+  const [wnConcern, setWnConcern]         = useState<string | null>(null);
+  const [wnPlan, setWnPlan]               = useState<WnPlan | null>(null);
+  const [wnLoading, setWnLoading]         = useState(false);
+  const [wnError, setWnError]             = useState<string | null>(null);
+  const [refineOpen, setRefineOpen]       = useState(false);
+  const [refineHours, setRefineHours]     = useState("");
+  const [refinePrimary, setRefinePrimary] = useState<boolean | null>(null);
+  const [wnRefining, setWnRefining]       = useState(false);
 
   function goTo(s: Step) {
     setStep(s);
@@ -151,6 +173,59 @@ export default function Home() {
     setMedical(""); setMedications(""); setAllergies(""); setRecentChanges("");
     setWellbeing([]); setBrief(null); setError(null);
     setFhirId(""); setFhirLoading(false); setFhirError(null); setFhirLoaded(false);
+    setWnConcern(null); setWnPlan(null); setWnLoading(false); setWnError(null);
+    setRefineOpen(false); setRefineHours(""); setRefinePrimary(null); setWnRefining(false);
+  }
+
+  async function selectConcern(concern: string) {
+    setWnConcern(concern);
+    setWnLoading(true);
+    setWnError(null);
+    try {
+      const res = await fetch("/api/whats-next", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ careStage: stage, concern }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setWnPlan(data);
+    } catch {
+      setWnError("Something went wrong. Please try again.");
+      setWnConcern(null);
+    } finally {
+      setWnLoading(false);
+    }
+  }
+
+  async function refinePlan() {
+    if (!wnConcern) return;
+    setWnRefining(true);
+    try {
+      const res = await fetch("/api/whats-next", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          careStage: stage,
+          concern: wnConcern,
+          hoursPerWeek: refineHours || undefined,
+          isPrimary: refinePrimary !== null ? refinePrimary : undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setWnPlan(data);
+      setRefineOpen(false);
+    } catch {
+      setWnError("Could not refine the plan. Please try again.");
+    } finally {
+      setWnRefining(false);
+    }
+  }
+
+  function resetWn() {
+    setWnConcern(null); setWnPlan(null); setWnLoading(false); setWnError(null);
+    setRefineOpen(false); setRefineHours(""); setRefinePrimary(null); setWnRefining(false);
   }
 
   const dateStr = new Date().toLocaleDateString("en-US", {
@@ -432,6 +507,35 @@ export default function Home() {
         button:focus-visible, textarea:focus-visible, input:focus-visible {
           outline: 3px solid var(--burg); outline-offset: 2px;
         }
+
+        /* What's Next */
+        .wn-section { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+        .wn-eyebrow { font-size: 11px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+        .wn-heading { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 500; color: var(--ink); line-height: 1.3; margin-bottom: 1.25rem; }
+        .wn-options { display: flex; flex-direction: column; gap: 8px; }
+        .wn-option { width: 100%; text-align: left; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink-soft); transition: all 0.15s; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .wn-option:hover { border-color: var(--burg-border); background: var(--burg-light); color: var(--burg); }
+        .wn-loading { display: flex; flex-direction: column; align-items: center; padding: 2.5rem 1rem; gap: 0.75rem; }
+        .wn-loading-text { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--ink); }
+        .wn-plan-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; color: var(--ink); margin-bottom: 0.5rem; margin-top: 0.25rem; }
+        .wn-plan-sub { font-size: 14px; color: var(--muted); margin-bottom: 2rem; line-height: 1.65; }
+        .plan-section { margin-bottom: 1.75rem; }
+        .plan-period { font-size: 11px; font-weight: 600; color: var(--burg); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 10px; }
+        .plan-period::after { content: ''; flex: 1; height: 1px; background: var(--burg-border); }
+        .plan-items { display: flex; flex-direction: column; gap: 8px; }
+        .plan-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); }
+        .plan-item-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--burg); flex-shrink: 0; margin-top: 7px; }
+        .plan-item-text { font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
+        .refine-card { margin-top: 1.5rem; border: 1px solid var(--border-soft); border-radius: var(--radius-md); overflow: hidden; }
+        .refine-toggle { width: 100%; text-align: left; padding: 14px 18px; background: var(--surface-alt); border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .refine-toggle:hover { background: var(--border-soft); }
+        .refine-body { padding: 18px; background: var(--surface); border-top: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 16px; }
+        .refine-field-label { font-size: 13px; font-weight: 500; color: var(--ink-soft); margin-bottom: 8px; }
+        .refine-row { display: flex; gap: 8px; }
+        .refine-pill { flex: 1; padding: 10px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; text-align: center; }
+        .refine-pill:hover { border-color: var(--burg-border); color: var(--ink); }
+        .refine-pill.sel { background: var(--burg-light); border: 2px solid var(--burg); color: var(--burg); font-weight: 500; }
+        .wn-disclaimer { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-soft); }
       `}</style>
 
       {/* ═══ HERO ═══ */}
@@ -720,6 +824,116 @@ export default function Home() {
 
           <div className="disclosure">
             Generated with AI assistance on {dateStr}. For organizational purposes only. Not a medical record. Not a substitute for professional medical or legal advice.
+          </div>
+
+          {/* What's Next section */}
+          <div className="wn-section">
+            {!wnPlan && !wnLoading && (
+              <div className="no-print">
+                <div className="wn-eyebrow">What&apos;s Next?</div>
+                <h3 className="wn-heading">What&apos;s your most pressing concern right now?</h3>
+                {wnError && <div className="error-banner" style={{marginBottom:"1rem"}}>{wnError}</div>}
+                <div className="wn-options">
+                  {WN_CONCERNS.map(concern => (
+                    <button key={concern} className="wn-option" onClick={() => selectConcern(concern)}>
+                      {concern}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {wnLoading && (
+              <div className="wn-loading no-print" role="status" aria-live="polite">
+                <div className="loading-dots" aria-hidden="true">
+                  <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
+                </div>
+                <div className="wn-loading-text">Building your plan...</div>
+              </div>
+            )}
+
+            {wnPlan && !wnLoading && (
+              <>
+                <div className="no-print"><div className="wn-eyebrow">What&apos;s Next?</div></div>
+                <h3 className="wn-plan-title">Your 30-day plan</h3>
+                <p className="wn-plan-sub">Built around your care stage and concern. Start with Week 1.</p>
+
+                <div className="plan-section">
+                  <div className="plan-period">Week 1 — Immediate priorities</div>
+                  <div className="plan-items">
+                    {wnPlan.week1.map((item, i) => (
+                      <div className="plan-item" key={i}>
+                        <div className="plan-item-dot" />
+                        <div className="plan-item-text">{item}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="plan-section">
+                  <div className="plan-period">Weeks 2 and 3 — Short-term actions</div>
+                  <div className="plan-items">
+                    {wnPlan.weeks23.map((item, i) => (
+                      <div className="plan-item" key={i}>
+                        <div className="plan-item-dot" />
+                        <div className="plan-item-text">{item}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="plan-section">
+                  <div className="plan-period">Week 4 — Looking ahead</div>
+                  <div className="plan-items">
+                    {wnPlan.week4.map((item, i) => (
+                      <div className="plan-item" key={i}>
+                        <div className="plan-item-dot" />
+                        <div className="plan-item-text">{item}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="refine-card no-print">
+                  <button className="refine-toggle" onClick={() => setRefineOpen(o => !o)} aria-expanded={refineOpen}>
+                    Refine your plan
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,transform:refineOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}><path d="M6 9l6 6 6-6"/></svg>
+                  </button>
+                  {refineOpen && (
+                    <div className="refine-body">
+                      <div>
+                        <div className="refine-field-label">How many hours per week do you have available?</div>
+                        <div className="refine-row">
+                          {[["Less than 5 hours","<5 hrs"],["5 to 10 hours","5–10 hrs"],["10 or more hours","10+ hrs"]].map(([val, label]) => (
+                            <button key={val} className={`refine-pill${refineHours === val ? " sel" : ""}`} onClick={() => setRefineHours(refineHours === val ? "" : val)}>{label}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="refine-field-label">Are you the primary caregiver?</div>
+                        <div className="refine-row" style={{maxWidth:200}}>
+                          <button className={`refine-pill${refinePrimary === true ? " sel" : ""}`} onClick={() => setRefinePrimary(refinePrimary === true ? null : true)}>Yes</button>
+                          <button className={`refine-pill${refinePrimary === false ? " sel" : ""}`} onClick={() => setRefinePrimary(refinePrimary === false ? null : false)}>No</button>
+                        </div>
+                      </div>
+                      {wnError && <div className="error-banner">{wnError}</div>}
+                      <button className="btn-primary" style={{marginTop:0}} onClick={refinePlan} disabled={wnRefining || (!refineHours && refinePrimary === null)}>
+                        {wnRefining ? "Refining..." : "Update my plan →"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="wn-disclaimer">
+                  This plan is a starting point. Always consult your care team for medical decisions.
+                </div>
+
+                <div className="no-print" style={{marginTop:"1.25rem"}}>
+                  <button className="btn-ghost" style={{marginTop:0}} onClick={resetWn}>Try a different concern</button>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="no-print" style={{marginTop:"2rem",display:"flex",flexDirection:"column" as const,gap:10}}>
